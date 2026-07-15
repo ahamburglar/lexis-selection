@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lexi's Selection</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=4" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Curated kidswear deals</p>
+        <h1>Lexi's Selection</h1>
+        <p class="tagline">
+          Good brands, smarter prices.
+          <span>Built for the 70% off finds.</span>
+        </p>
+      </div>
+      <button id="refreshButton" type="button">Refresh latest</button>
+    </header>
+
+    <main>
+      <section class="controls" aria-label="Filters">
+        <div class="filterGroup brandFilter">
+          <div class="filterHead">
+            <span>Brand</span>
+            <div class="filterActions">
+              <button id="favoriteBrandsButton" class="ghostButton" type="button">My picks</button>
+              <button id="clearBrandsButton" class="ghostButton" type="button" hidden>Clear</button>
+            </div>
+          </div>
+          <button id="brandToggleArea" class="brandToggleArea" type="button" aria-expanded="false">
+            <strong id="brandSummary" class="brandSummary">All brands</strong>
+            <span id="toggleBrandsButton" class="brandHint">Choose</span>
+          </button>
+          <div id="brandList" class="checkList" aria-label="Brands" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter sourceFilter">
+          <div class="filterHead">
+            <span>Source</span>
+            <div class="filterActions">
+              <button id="clearSourcesButton" class="ghostButton" type="button" hidden>Clear</button>
+            </div>
+          </div>
+          <button id="sourceToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="sourceSummary" class="choiceSummary">All sources</strong>
+            <span id="toggleSourcesButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="sourceList" class="sourceList" aria-label="Sources" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Discount</span></div>
+          <button id="discountToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="discountSummary" class="choiceSummary">70%+ off</strong>
+            <span id="toggleDiscountButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="discountList" class="sourceList choiceList" aria-label="Discount" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Type</span></div>
+          <button id="typeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="typeSummary" class="choiceSummary">All items</strong>
+            <span id="toggleTypeButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="typeList" class="sourceList choiceList" aria-label="Type" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Gender</span></div>
+          <button id="genderToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="genderSummary" class="choiceSummary">All</strong>
+            <span id="toggleGenderButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="genderList" class="sourceList choiceList" aria-label="Gender" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Clothes size</span></div>
+          <button id="sizeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="sizeSummary" class="choiceSummary">3Y-6Y</strong>
+            <span id="toggleSizeButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="sizeList" class="sourceList choiceList" aria-label="Clothes size" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Shoe size</span></div>
+          <button id="shoeSizeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="shoeSizeSummary" class="choiceSummary">US 7-9 / EU 23-26</strong>
+            <span id="toggleShoeSizeButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="shoeSizeList" class="sourceList choiceList" aria-label="Shoe size" hidden></div>
+        </div>
+        <div class="searchFilter">
+          <button id="toggleSearchButton" class="iconButton" type="button" aria-label="Search products" aria-expanded="false"></button>
+          <div id="searchPanel" class="searchPanel" hidden>
+            <label>
+              Search
+              <input id="searchInput" type="search" placeholder="brand, product, size..." />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="status">
+        <div class="statusLeft">
+          <span><strong id="count">--</strong><span> matches</span></span>
+          <button id="newOnlyButton" class="ghostButton statusButton" type="button" hidden>New only</button>
+        </div>
+        <div id="updated">Loading latest...</div>
+      </section>
+
+      <section id="progressWrap" class="progressWrap" hidden>
+        <div class="progressBar" aria-hidden="true">
+          <span id="progressFill"></span>
+        </div>
+        <div id="progressText" class="progressText"></div>
+      </section>
+
+      <section id="grid" class="grid" aria-live="polite"></section>
+    </main>
+
+    <template id="cardTemplate">
+      <article class="card">
+        <a class="imageWrap" target="_blank" rel="noreferrer">
+          <img alt="" loading="lazy" />
+        </a>
+        <div class="cardBody">
+          <div class="metaRow">
+            <span class="source"></span>
+            <span class="newBadge" hidden>New</span>
+          </div>
+          <h2></h2>
+          <p class="brand"></p>
+          <div class="priceRow">
+            <span class="sale"></span>
+            <span class="original"></span>
+            <span class="discount"></span>
+            <span class="priceChange" hidden></span>
+          </div>
+          <p class="sizes"></p>
+          <a class="openLink" target="_blank" rel="noreferrer">Open product</a>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

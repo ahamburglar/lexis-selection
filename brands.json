@@ -1,0 +1,439 @@
+[
+  {
+    "name": "Konges Slojd",
+    "matches": [
+      "konges"
+    ],
+    "collections": [
+      "konges-slojd"
+    ],
+    "type": "both"
+  },
+  {
+    "name": "Wheat",
+    "matches": [
+      "wheat"
+    ],
+    "collections": [
+      "wheat"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Mini A Ture",
+    "matches": [
+      "mini a ture"
+    ],
+    "collections": [
+      "mini-a-ture"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Tutu Du Monde",
+    "matches": [
+      "tutu"
+    ],
+    "collections": [
+      "tutu-du-monde"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Louise Misha",
+    "matches": [
+      "louise misha"
+    ],
+    "collections": [
+      "louise-misha"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Rylee+Cru",
+    "matches": [
+      "rylee"
+    ],
+    "collections": [
+      "rylee-cru"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Quincy Mae",
+    "matches": [
+      "quincy"
+    ],
+    "collections": [
+      "quincy-mae"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Noralee",
+    "matches": [
+      "noralee",
+      "nora lee"
+    ],
+    "collections": [
+      "noralee"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Floss",
+    "matches": [
+      "floss",
+      "flöss"
+    ],
+    "collections": [
+      "floss"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Huxbaby",
+    "matches": [
+      "huxbaby"
+    ],
+    "collections": [
+      "huxbaby"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Billieblush",
+    "matches": [
+      "billieblush"
+    ],
+    "collections": [
+      "billieblush"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Wynken",
+    "matches": [
+      "wynken"
+    ],
+    "collections": [
+      "wynken"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Loud",
+    "matches": [
+      "loud"
+    ],
+    "collections": [
+      "loud"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Piupiuchick",
+    "matches": [
+      "piupiuchick"
+    ],
+    "collections": [
+      "piupiuchick"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Oilily",
+    "matches": [
+      "oilily"
+    ],
+    "collections": [
+      "oilily"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Old Soles",
+    "matches": [
+      "old soles"
+    ],
+    "collections": [
+      "old-soles"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "See Kai Run",
+    "matches": [
+      "see kai run"
+    ],
+    "collections": [
+      "see-kai-run"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Bisgaard",
+    "matches": [
+      "bisgaard"
+    ],
+    "collections": [
+      "bisgaard"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Misha and Puff",
+    "matches": [
+      "misha and puff",
+      "misha & puff"
+    ],
+    "collections": [
+      "misha-and-puff"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Bobo Choses",
+    "matches": [
+      "bobo choses"
+    ],
+    "collections": [
+      "bobo-choses"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Mini Rodini",
+    "matches": [
+      "mini rodini"
+    ],
+    "collections": [
+      "mini-rodini"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Apolina",
+    "matches": [
+      "apolina"
+    ],
+    "collections": [
+      "apolina"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Bonpoint",
+    "matches": [
+      "bonpoint"
+    ],
+    "collections": [
+      "bonpoint"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Bonton",
+    "matches": [
+      "bonton"
+    ],
+    "collections": [
+      "bonton"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Molo",
+    "matches": [
+      "molo"
+    ],
+    "collections": [
+      "molo"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Tiny Cottons",
+    "matches": [
+      "tiny cottons",
+      "tinycottons"
+    ],
+    "collections": [
+      "tiny-cottons",
+      "tinycottons"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "The Animals Observatory",
+    "matches": [
+      "the animals observatory",
+      "animals observatory"
+    ],
+    "collections": [
+      "the-animals-observatory",
+      "animals-observatory"
+    ],
+    "type": "clothes"
+  },
+  {
+    "name": "Bundgaard",
+    "matches": [
+      "bundgaard"
+    ],
+    "collections": [
+      "bundgaard"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "1+ In The Family",
+    "matches": ["1+ in the family", "1+inthefamily", "one more in the family"],
+    "collections": ["1-in-the-family", "1inthefamily"],
+    "type": "clothes"
+  },
+  {
+    "name": "Beau Loves",
+    "matches": ["beau loves"],
+    "collections": ["beau-loves"],
+    "type": "clothes"
+  },
+  {
+    "name": "Bebe Organic",
+    "matches": ["bebe organic", "bébé organic"],
+    "collections": ["bebe-organic"],
+    "type": "clothes"
+  },
+  {
+    "name": "Caramel",
+    "matches": ["caramel", "caramel baby & child", "caramel baby and child"],
+    "collections": ["caramel", "caramel-baby-child"],
+    "type": "clothes"
+  },
+  {
+    "name": "C'era Una Volta",
+    "matches": ["c'era una volta", "c’era una volta", "cera una volta"],
+    "collections": ["cera-una-volta"],
+    "type": "clothes"
+  },
+  {
+    "name": "Donsje",
+    "matches": ["donsje", "donsje amsterdam"],
+    "collections": ["donsje", "donsje-amsterdam"],
+    "type": "both"
+  },
+  {
+    "name": "Emile et Ida",
+    "matches": ["emile et ida", "émile et ida"],
+    "collections": ["emile-et-ida"],
+    "type": "clothes"
+  },
+  {
+    "name": "FUB",
+    "matches": ["fub", "fub kids"],
+    "collections": ["fub", "fub-kids"],
+    "type": "clothes"
+  },
+  {
+    "name": "Gray Label",
+    "matches": ["gray label", "grey label"],
+    "collections": ["gray-label", "grey-label"],
+    "type": "clothes"
+  },
+  {
+    "name": "Jacadi",
+    "matches": ["jacadi", "jacadi paris"],
+    "collections": ["jacadi", "jacadi-paris"],
+    "type": "both"
+  },
+  {
+    "name": "Laranjinha",
+    "matches": ["laranjinha"],
+    "collections": ["laranjinha"],
+    "type": "clothes"
+  },
+  {
+    "name": "Liewood",
+    "matches": ["liewood"],
+    "collections": ["liewood"],
+    "type": "both"
+  },
+  {
+    "name": "Louis Louise",
+    "matches": ["louis louise"],
+    "collections": ["louis-louise"],
+    "type": "clothes"
+  },
+  {
+    "name": "Mabli",
+    "matches": ["mabli", "mabli knits"],
+    "collections": ["mabli", "mabli-knits"],
+    "type": "clothes"
+  },
+  {
+    "name": "MarMar Copenhagen",
+    "matches": ["marmar", "marmar copenhagen"],
+    "collections": ["marmar", "marmar-copenhagen"],
+    "type": "clothes"
+  },
+  {
+    "name": "Nellystella",
+    "matches": ["nellystella", "nelly stella"],
+    "collections": ["nellystella", "nelly-stella"],
+    "type": "clothes"
+  },
+  {
+    "name": "Oeuf",
+    "matches": ["oeuf", "oeuf nyc"],
+    "collections": ["oeuf", "oeuf-nyc"],
+    "type": "clothes"
+  },
+  {
+    "name": "Organic Zoo",
+    "matches": ["organic zoo"],
+    "collections": ["organic-zoo"],
+    "type": "clothes"
+  },
+  {
+    "name": "Paade Mode",
+    "matches": ["paade mode"],
+    "collections": ["paade-mode"],
+    "type": "clothes"
+  },
+  {
+    "name": "Petit Bateau",
+    "matches": ["petit bateau"],
+    "collections": ["petit-bateau"],
+    "type": "clothes"
+  },
+  {
+    "name": "Raspberry Plum",
+    "matches": ["raspberry plum"],
+    "collections": ["raspberry-plum"],
+    "type": "clothes"
+  },
+  {
+    "name": "Silly Silas",
+    "matches": ["silly silas"],
+    "collections": ["silly-silas"],
+    "type": "clothes"
+  },
+  {
+    "name": "Stella",
+    "matches": ["stella mccartney", "stella mccartney kids", "stella kids"],
+    "collections": ["stella-mccartney", "stella-mccartney-kids", "stella-kids"],
+    "type": "clothes"
+  },
+  {
+    "name": "The New Society",
+    "matches": ["the new society"],
+    "collections": ["the-new-society"],
+    "type": "clothes"
+  },
+  {
+    "name": "Wolf & Rita",
+    "matches": ["wolf & rita", "wolf and rita"],
+    "collections": ["wolf-rita", "wolf-and-rita"],
+    "type": "clothes"
+  }
+]
