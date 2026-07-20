@@ -601,6 +601,9 @@ function render() {
     node.querySelector("h2").textContent = find.title;
     const gender = find.gender ? find.gender[0].toUpperCase() + find.gender.slice(1) : "Neutral";
     node.querySelector(".brand").textContent = `${find.brand} · ${find.category || "Kidswear"} · ${gender}`;
+    const promoNote = node.querySelector(".promoNote");
+    promoNote.hidden = !find.promoNote;
+    promoNote.textContent = find.promoNote || "";
     node.querySelector(".sale").textContent = money(find.salePrice, find.currency);
     node.querySelector(".original").textContent = money(find.originalPrice, find.currency);
     node.querySelector(".discount").textContent = pct(find.discount);

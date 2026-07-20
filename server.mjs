@@ -85,6 +85,156 @@ const stores = [
     mode: "all-products",
   },
   {
+    source: "Ele Ella",
+    baseUrl: "https://eleella.com",
+    mode: "all-products",
+  },
+  {
+    source: "Little Red Planet",
+    baseUrl: "https://thelittleredplanet.com",
+    mode: "all-products",
+  },
+  {
+    source: "Panda and Cub",
+    baseUrl: "https://pandaandcub.com",
+    mode: "all-products",
+    promoNote: "Extra 30% off code may apply. Not included in price.",
+  },
+  {
+    source: "Little Rags and Riches",
+    baseUrl: "https://www.littleragsandriches.com",
+    mode: "all-products",
+  },
+  {
+    source: "Faded Floral Boutique",
+    baseUrl: "https://fadedfloralboutique.com",
+    mode: "all-products",
+  },
+  {
+    source: "Hello Alyss",
+    baseUrl: "https://www.hello-alyss.com",
+    mode: "all-products",
+  },
+  {
+    source: "Little Loungers",
+    baseUrl: "https://littleloungers.com",
+    mode: "all-products",
+  },
+  {
+    source: "Millie Bo Peep",
+    baseUrl: "https://www.milliebopeep.com",
+    mode: "all-products",
+  },
+  {
+    source: "Sanna Baby and Child",
+    baseUrl: "https://sannababyandchild.com",
+    mode: "all-products",
+  },
+  {
+    source: "Le Petit Kids",
+    baseUrl: "https://lepetitkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Bluefly",
+    baseUrl: "https://www.bluefly.com",
+    mode: "all-products",
+    pages: 5,
+    onlyTargetBrands: true,
+  },
+  {
+    source: "Born Yesterday Kids",
+    baseUrl: "https://bornyesterdaykids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Stoopher",
+    baseUrl: "https://stoopher.com",
+    mode: "all-products",
+  },
+  {
+    source: "Cotton Candy Kidz",
+    baseUrl: "https://cottoncandykidz.com",
+    mode: "all-products",
+  },
+  {
+    source: "Kid Biz",
+    baseUrl: "https://kidbizkid.com",
+    mode: "all-products",
+  },
+  {
+    source: "Mini Dreamers",
+    baseUrl: "https://www.minidreamers.com",
+    mode: "all-products",
+  },
+  {
+    source: "Bears Closet Boutique",
+    baseUrl: "https://bearsclosetboutique.com",
+    mode: "all-products",
+  },
+  {
+    source: "Kids Atelier",
+    baseUrl: "https://www.kidsatelier.com",
+    mode: "all-products",
+  },
+  {
+    source: "Bdazzle",
+    baseUrl: "https://shopbdazzle.com",
+    mode: "all-products",
+  },
+  {
+    source: "Little Dreamers Boutique",
+    baseUrl: "https://littledreamers.boutique",
+    mode: "all-products",
+  },
+  {
+    source: "Honeypie Kids",
+    baseUrl: "https://www.honeypiekids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Shop Simon",
+    baseUrl: "https://shop.simon.com",
+    mode: "all-products",
+    pages: 5,
+    onlyTargetBrands: true,
+  },
+  {
+    source: "Skipper Scout",
+    baseUrl: "https://skipperscout.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Shoppe Miami",
+    baseUrl: "https://theshoppemiami.com",
+    mode: "all-products",
+  },
+  {
+    source: "Oh Baby St Pete",
+    baseUrl: "https://ohbabystp.com",
+    mode: "all-products",
+  },
+  {
+    source: "Coucou Kids",
+    baseUrl: "https://shopcoucoukids.com",
+    mode: "all-products",
+  },
+  {
+    source: "My Oh My Kids",
+    baseUrl: "https://myohmykids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Jam Baby",
+    baseUrl: "https://shopjambaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Tottini",
+    baseUrl: "https://tottini.com",
+    mode: "all-products",
+  },
+  {
     source: "Childrensalon",
     baseUrl: "https://www.childrensalon.com",
     mode: "childrensalon-sale",
@@ -329,6 +479,7 @@ function productToFind(product, store, minDiscount) {
     originalPrice: best.original,
     currency: store.currency || "USD",
     discount: best.discount,
+    promoNote: store.promoNote || "",
     sizes,
     sizeOptions,
     bestSize: best.size,
@@ -343,16 +494,21 @@ async function fetchShopifyProducts(store) {
   const paths = store.mode === "collections"
     ? store.collections.map((collection) => `/collections/${collection}/products.json`)
     : ["/products.json"];
+  const pageCount = store.pages || 20;
 
   for (const productPath of paths) {
-    for (let page = 1; page <= 20; page += 1) {
+    for (let page = 1; page <= pageCount; page += 1) {
       const url = `${store.baseUrl}${productPath}?limit=250&page=${page}`;
       const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
       if (!response.ok) break;
       const json = await response.json();
       const batch = json.products || [];
       if (!batch.length) break;
-      products.push(...batch);
+      products.push(...(
+        store.onlyTargetBrands
+          ? batch.filter((product) => targetBrands.has(normalizeBrand(product.vendor)))
+          : batch
+      ));
       if (batch.length < 250) break;
     }
   }
