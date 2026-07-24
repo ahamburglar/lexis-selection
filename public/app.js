@@ -351,6 +351,20 @@ function priceComparisonText(find) {
   return `${prefix} ${money(delta, find.currency)}`;
 }
 
+function hasAbnormalPrice(find) {
+  const sale = Number(find.salePrice);
+  const original = Number(find.originalPrice);
+  const discount = Number(find.discount);
+  if (!Number.isFinite(sale) || !Number.isFinite(original) || !Number.isFinite(discount)) return true;
+  if (sale <= 0 || original <= 0 || original <= sale) return true;
+
+  const ratio = original / sale;
+  return original >= 5000
+    || ratio >= 50
+    || (original >= 1000 && ratio >= 20)
+    || (original >= 500 && displayedDiscountValue(discount) >= 0.95);
+}
+
 function choiceValue(name) {
   return singleChoiceFilters[name].value;
 }
@@ -1017,7 +1031,7 @@ function renderRefreshReport(data) {
 }
 
 function applyData(data, labelPrefix = "Cached") {
-  allFinds = data.finds;
+  allFinds = (data.finds || []).filter((find) => !hasAbnormalPrice(find));
   allBrands = (data.brands || []).map((item) => item.brand).filter(Boolean);
   brandTypes = new Map((data.brands || []).map((item) => [item.brand, item.type || "clothes"]));
   allSources = (data.sources || []).map((item) => item.source).filter(Boolean);

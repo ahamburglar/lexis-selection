@@ -41,7 +41,37 @@ async function readPublicAssets(dir, prefix = "") {
   return assets;
 }
 
-const snapshot = JSON.parse(await fs.readFile(path.join(deployDir, "snapshot.json"), "utf8"));
+function displayedDiscountValue(discount) {
+  return Math.round(Number(discount) * 100) / 100;
+}
+
+function hasAbnormalPrice(find) {
+  const sale = Number(find.salePrice);
+  const original = Number(find.originalPrice);
+  const discount = Number(find.discount);
+  if (!Number.isFinite(sale) || !Number.isFinite(original) || !Number.isFinite(discount)) return true;
+  if (sale <= 0 || original <= 0 || original <= sale) return true;
+
+  const ratio = original / sale;
+  return original >= 5000
+    || ratio >= 50
+    || (original >= 1000 && ratio >= 20)
+    || (original >= 500 && displayedDiscountValue(discount) >= 0.95);
+}
+
+function sanitizeSnapshot(snapshot) {
+  const finds = (snapshot.finds || []).filter((find) => !hasAbnormalPrice(find));
+  const removed = (snapshot.finds || []).length - finds.length;
+  return {
+    ...snapshot,
+    finds,
+    count: finds.length,
+    report: snapshot.report ? { ...snapshot.report, finds: finds.length } : snapshot.report,
+    removedAbnormalPrices: removed,
+  };
+}
+
+const snapshot = sanitizeSnapshot(JSON.parse(await fs.readFile(path.join(deployDir, "snapshot.json"), "utf8")));
 const assets = await readPublicAssets(publicDir);
 const htmlAsset = assets.find((asset) => asset.path === "/index.html");
 if (htmlAsset) assets.push({ ...htmlAsset, path: "/" });

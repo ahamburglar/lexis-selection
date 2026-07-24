@@ -779,6 +779,17 @@ function displayDiscount(discount) {
   return Math.round(discount * 100) / 100;
 }
 
+function isAbnormalVariantPrice({ sale, original, discount }) {
+  if (!Number.isFinite(sale) || !Number.isFinite(original) || !Number.isFinite(discount)) return true;
+  if (sale <= 0 || original <= 0 || original <= sale) return true;
+
+  const ratio = original / sale;
+  return original >= 5000
+    || ratio >= 50
+    || (original >= 1000 && ratio >= 20)
+    || (original >= 500 && displayDiscount(discount) >= 0.95);
+}
+
 function productToFind(product, store, minDiscount) {
   const brand = detectProductBrand(product);
   if (!targetBrands.has(brand)) return null;
@@ -808,6 +819,7 @@ function productToFind(product, store, minDiscount) {
     .filter((variant) => (
       variant.available
       && variant.discount !== null
+      && !isAbnormalVariantPrice(variant)
       && displayDiscount(variant.discount) >= minDiscount
       && (shoeProduct || !isAdultClothingSize(variant.size))
     ));
