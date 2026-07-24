@@ -1008,6 +1008,7 @@ input {
 }
 
 .imageWrap {
+  position: relative;
   display: block;
   aspect-ratio: 1 / 1;
   background: #efe6da;
@@ -1019,6 +1020,28 @@ input {
   object-fit: contain;
   display: block;
   padding: 10px;
+}
+
+.imageFallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.card.imageMissing .imageWrap img {
+  display: none;
+}
+
+.card.imageMissing .imageFallback {
+  display: flex;
 }
 
 .cardBody {

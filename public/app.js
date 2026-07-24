@@ -1104,6 +1104,10 @@ function render() {
     imgLink.href = find.url;
     img.src = find.image;
     img.alt = find.title;
+    img.addEventListener("error", () => {
+      card.classList.add("imageMissing");
+      img.removeAttribute("src");
+    }, { once: true });
     const sourceLink = node.querySelector(".source");
     sourceLink.textContent = find.source;
     const sourceHref = sourceHomeUrl(find.source, find.url);
