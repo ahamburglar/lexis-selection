@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "build": "node scripts/build-sites.mjs"
   },
   "dependencies": {}
 }

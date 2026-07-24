@@ -407,6 +407,30 @@
     "type": "clothes"
   },
   {
+    "name": "Petite Hailey",
+    "matches": ["petite hailey"],
+    "collections": ["petite-hailey"],
+    "type": "clothes"
+  },
+  {
+    "name": "SISSEL EDELBO",
+    "matches": ["sissel edelbo"],
+    "collections": ["sissel-edelbo"],
+    "type": "clothes"
+  },
+  {
+    "name": "Kalinka",
+    "matches": ["kalinka"],
+    "collections": ["kalinka"],
+    "type": "clothes"
+  },
+  {
+    "name": "Boheme",
+    "matches": ["boheme", "boheme goods", "boheme kids"],
+    "collections": ["boheme", "boheme-goods", "boheme-kids"],
+    "type": "clothes"
+  },
+  {
     "name": "Raspberry Plum",
     "matches": ["raspberry plum"],
     "collections": ["raspberry-plum"],
