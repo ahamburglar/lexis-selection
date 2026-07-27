@@ -1,11 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const deployDir = path.join(root, "deploy");
 const distDir = path.join(root, "dist");
 const serverDir = path.join(distDir, "server");
+const execFileAsync = promisify(execFile);
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -70,6 +73,14 @@ function sanitizeSnapshot(snapshot) {
     removedAbnormalPrices: removed,
   };
 }
+
+await execFileAsync("node", ["server.mjs", "--write-snapshot"], {
+  cwd: root,
+  env: {
+    ...process.env,
+    BUILD_MIN_DISCOUNT: "0.7",
+  },
+});
 
 const snapshot = sanitizeSnapshot(JSON.parse(await fs.readFile(path.join(deployDir, "snapshot.json"), "utf8")));
 const assets = await readPublicAssets(publicDir);

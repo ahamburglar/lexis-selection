@@ -1590,6 +1590,13 @@ async function latestFinds({ force = false, minDiscount = 0.7, selectedSources =
   return snapshotFromCache(cached, minDiscount);
 }
 
+async function writeDeploySnapshot({ minDiscount = 0.7 } = {}) {
+  const snapshot = await latestFinds({ force: false, minDiscount });
+  await fs.mkdir(path.dirname(snapshotFile), { recursive: true });
+  await fs.writeFile(snapshotFile, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  return snapshot;
+}
+
 async function streamFinds(res, { force = false, minDiscount = 0.7, selectedSources = null } = {}) {
   res.writeHead(200, {
     "content-type": "application/x-ndjson; charset=utf-8",
@@ -1714,6 +1721,13 @@ const server = http.createServer(async (req, res) => {
   await sendStatic(res, url.pathname);
 });
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Kidswear finder running at http://localhost:${PORT}`);
-});
+if (process.argv.includes("--write-snapshot")) {
+  const requestedDiscount = Number.parseFloat(process.env.BUILD_MIN_DISCOUNT || "0.7");
+  const minDiscount = Number.isFinite(requestedDiscount) ? Math.min(Math.max(requestedDiscount, 0.3), 0.9) : 0.7;
+  const snapshot = await writeDeploySnapshot({ minDiscount });
+  console.log(`Wrote deploy snapshot with ${snapshot.sources?.length || 0} sources and ${snapshot.finds?.length || 0} finds.`);
+} else {
+  server.listen(PORT, "127.0.0.1", () => {
+    console.log(`Kidswear finder running at http://localhost:${PORT}`);
+  });
+}
