@@ -7,7 +7,6 @@ const brandList = document.querySelector("#brandList");
 const brandToggleArea = document.querySelector("#brandToggleArea");
 const brandSummary = document.querySelector("#brandSummary");
 const toggleBrandsButton = document.querySelector("#toggleBrandsButton");
-const favoriteBrandsButton = document.querySelector("#favoriteBrandsButton");
 const clearBrandsButton = document.querySelector("#clearBrandsButton");
 const sourceList = document.querySelector("#sourceList");
 const sourceToggleArea = document.querySelector("#sourceToggleArea");
@@ -16,6 +15,7 @@ const toggleSourcesButton = document.querySelector("#toggleSourcesButton");
 const clearSourcesButton = document.querySelector("#clearSourcesButton");
 const adminUnlockButton = document.querySelector("#adminUnlockButton");
 const refreshButton = document.querySelector("#refreshButton");
+const stopRefreshButton = document.querySelector("#stopRefreshButton");
 const countEl = document.querySelector("#count");
 const updatedEl = document.querySelector("#updated");
 const newOnlyButton = document.querySelector("#newOnlyButton");
@@ -51,8 +51,110 @@ let latestReportData = null;
 let newOnly = false;
 let priceDropsOnly = false;
 let loadedMinDiscount = 0.4;
+let activeLoadController = null;
+let refreshInProgress = false;
+let refreshBackupData = null;
+let latestCompleteData = null;
 const adminRefreshTokenKey = "lexiMomAdminRefreshToken";
 const favoriteBrands = ["Billieblush", "Floss", "Wynken", "Emile et Ida"];
+const brandStyleCollections = [
+  {
+    id: "my-picks",
+    label: "My picks",
+    brands: favoriteBrands,
+  },
+  {
+    id: "french",
+    label: "French",
+    brands: [
+      "Louise Misha",
+      "Bonpoint",
+      "Bonton",
+      "Emile et Ida",
+      "Louis Louise",
+      "Jacadi",
+      "Petit Bateau",
+      "Nellystella",
+      "C'era Una Volta",
+      "Noralee",
+    ],
+  },
+  {
+    id: "nordic",
+    label: "Nordic minimal",
+    brands: [
+      "Konges Slojd",
+      "Wheat",
+      "Mini A Ture",
+      "1+ In The Family",
+      "Bebe Organic",
+      "FUB",
+      "Gray Label",
+      "Liewood",
+      "Mabli",
+      "MarMar Copenhagen",
+      "Organic Zoo",
+      "Silly Silas",
+    ],
+  },
+  {
+    id: "arty",
+    label: "Colorful / arty",
+    brands: [
+      "Bobo Choses",
+      "Mini Rodini",
+      "Tiny Cottons",
+      "The Animals Observatory",
+      "Beau Loves",
+      "Billieblush",
+      "Floss",
+      "Oilily",
+      "Raspberry Plum",
+      "Stella",
+      "The New Society",
+      "Wynken",
+      "Huxbaby",
+    ],
+  },
+  {
+    id: "heirloom",
+    label: "Boho / heirloom",
+    brands: [
+      "Apolina",
+      "Misha and Puff",
+      "Caramel",
+      "Donsje",
+      "SISSEL EDELBO",
+      "Kalinka",
+      "Boheme",
+      "Bebe Organic",
+      "Tutu Du Monde",
+    ],
+  },
+  {
+    id: "dressy",
+    label: "Sweet dress-up",
+    brands: [
+      "Tutu Du Monde",
+      "Noralee",
+      "Petite Hailey",
+      "Nellystella",
+      "Billieblush",
+      "Bonpoint",
+    ],
+  },
+  {
+    id: "shoes",
+    label: "Shoes",
+    brands: [
+      "Old Soles",
+      "See Kai Run",
+      "Bisgaard",
+      "Bundgaard",
+      "Donsje",
+    ],
+  },
+];
 let brandSearchQuery = "";
 let sourceSearchQuery = "";
 const usualSources = [
@@ -101,6 +203,7 @@ const storeHomeUrls = new Map([
   ["Little Rags and Riches", "https://www.littleragsandriches.com"],
   ["Faded Floral Boutique", "https://fadedfloralboutique.com"],
   ["Hello Alyss", "https://www.hello-alyss.com"],
+  ["Hello Little Crew", "https://hellolittlecrew.com"],
   ["Little Loungers", "https://littleloungers.com"],
   ["Millie Bo Peep", "https://www.milliebopeep.com"],
   ["Sanna Baby and Child", "https://sannababyandchild.com"],
@@ -138,6 +241,22 @@ const storeHomeUrls = new Map([
   ["Childrensalon", "https://www.childrensalon.com"],
   ["Maisonette", "https://www.maisonette.com"],
   ["Enjoy Kids US", "https://enjoykidsus.com"],
+  ["Ellou", "https://www.shopellou.com"],
+  ["Little-ish", "https://shop.little-ish.com"],
+  ["Klade Children's Boutique", "https://kladechildren.com"],
+  ["Willkie's", "https://shopwillkies.com"],
+  ["Threadfare", "https://www.threadfare.com"],
+  ["Fussy Mussy", "https://fussymussycb.com"],
+  ["Alexa James Baby", "https://www.alexajbaby.com"],
+  ["Marigold Modern", "https://shop.marigoldmodern.com"],
+  ["Murray & Finn", "https://murrayandfinn.com"],
+  ["Cub Shrub", "https://cubshrub.com"],
+  ["Broomtail Kids", "https://broomtailkids.com"],
+  ["Danrie", "https://shopdanrie.com"],
+  ["Smoochie Baby", "https://smoochiebaby.com"],
+  ["Dreams of Cuteness", "https://www.dreamsofcuteness.com"],
+  ["Ely's & Co", "https://elysandco.com"],
+  ["Two Tulips", "https://twotulips.com"],
   ["Smallable", "https://www.smallable.com"],
 ]);
 function promoSortRank(item) {
@@ -219,10 +338,38 @@ function adminRefreshToken() {
   return window.sessionStorage.getItem(adminRefreshTokenKey) || "";
 }
 
+function cloneDataSnapshot(data) {
+  if (!data) return null;
+  return JSON.parse(JSON.stringify(data));
+}
+
+function sourceLabelText(data) {
+  const key = data?.cacheSource || "";
+  if (key === "snapshot-fallback") return "Snapshot fallback";
+  if (key === "live-cache") return "Live cache";
+  return data?.cacheSourceLabel || "Saved";
+}
+
+function looksLikeBrokenSavedData(data) {
+  if (!data || typeof data !== "object") return false;
+  const updatedAt = Date.parse(data.updatedAt || "");
+  const sourceCount = Array.isArray(data.sources) ? data.sources.length : 0;
+  return (
+    data.scanned === 0
+    && data.count === 0
+    && sourceCount >= 50
+    && Number.isFinite(updatedAt)
+    && updatedAt <= Date.parse("2000-01-01T00:00:00.000Z")
+  );
+}
+
 function updateAdminControls() {
   const unlocked = Boolean(adminRefreshToken());
   refreshButton.hidden = !unlocked;
+  stopRefreshButton.hidden = !unlocked;
+  stopRefreshButton.disabled = !refreshInProgress;
   if (!refreshButton.disabled) refreshButton.textContent = selectedSources.size ? "Refresh selected" : "Refresh latest";
+  stopRefreshButton.textContent = refreshInProgress ? "Stop refresh" : "Stop refresh";
   if (!reportToggleButton || !refreshReport) {
     adminUnlockButton.textContent = unlocked ? "Admin unlocked" : "Admin unlock";
     adminUnlockButton.classList.toggle("active", unlocked);
@@ -260,7 +407,27 @@ function lockAdminRefresh() {
   updateAdminControls();
 }
 
+function stopRefresh() {
+  if (!activeLoadController) return;
+  activeLoadController.abort();
+}
+
 const singleChoiceFilters = {
+  sort: {
+    value: "date-desc",
+    options: [
+      { value: "alpha-asc", label: "Alphabetically, A-Z" },
+      { value: "alpha-desc", label: "Alphabetically, Z-A" },
+      { value: "price-asc", label: "Price, low to high" },
+      { value: "price-desc", label: "Price, high to low" },
+      { value: "date-asc", label: "Date, old to new" },
+      { value: "date-desc", label: "Date, new to old" },
+    ],
+    toggle: document.querySelector("#sortToggleArea"),
+    summary: document.querySelector("#sortSummary"),
+    hint: document.querySelector("#toggleSortButton"),
+    list: document.querySelector("#sortList"),
+  },
   discount: {
     value: "0.7",
     options: [
@@ -349,6 +516,60 @@ function priceComparisonText(find) {
   if (delta < 0.01) return "";
   const prefix = comparison.priceDelta < 0 ? "down" : "up";
   return `${prefix} ${money(delta, find.currency)}`;
+}
+
+function originalSortIndex(find) {
+  return Number.isFinite(find.sortIndex) ? find.sortIndex : Number.MAX_SAFE_INTEGER;
+}
+
+function compareNumbers(a, b) {
+  const aValue = Number.isFinite(a) ? a : Number.POSITIVE_INFINITY;
+  const bValue = Number.isFinite(b) ? b : Number.POSITIVE_INFINITY;
+  return aValue - bValue;
+}
+
+function compareTitles(a, b) {
+  return String(a.title || "").localeCompare(String(b.title || ""));
+}
+
+function compareCurrentFeedOrder(a, b) {
+  return originalSortIndex(a) - originalSortIndex(b);
+}
+
+function sortFinds(finds) {
+  const sortValue = choiceValue("sort");
+  const items = [...finds];
+  items.sort((a, b) => {
+    if (sortValue === "alpha-asc") {
+      return compareTitles(a, b)
+        || compareNumbers(a.salePrice, b.salePrice)
+        || compareCurrentFeedOrder(a, b);
+    }
+    if (sortValue === "alpha-desc") {
+      return compareTitles(b, a)
+        || compareNumbers(a.salePrice, b.salePrice)
+        || compareCurrentFeedOrder(a, b);
+    }
+    if (sortValue === "price-asc") {
+      return compareNumbers(a.salePrice, b.salePrice)
+        || compareTitles(a, b)
+        || compareCurrentFeedOrder(a, b);
+    }
+    if (sortValue === "price-desc") {
+      return compareNumbers(b.salePrice, a.salePrice)
+        || compareTitles(a, b)
+        || compareCurrentFeedOrder(a, b);
+    }
+    if (sortValue === "date-asc") {
+      return compareCurrentFeedOrder(b, a)
+        || compareTitles(a, b)
+        || compareNumbers(a.salePrice, b.salePrice);
+    }
+    return compareCurrentFeedOrder(a, b)
+      || compareTitles(a, b)
+      || compareNumbers(a.salePrice, b.salePrice);
+  });
+  return items;
 }
 
 function hasAbnormalPrice(find) {
@@ -700,6 +921,39 @@ function renderBrandDirectory(brands) {
 
   const normalizedQuery = brandSearchQuery.trim().toLowerCase();
   const visibleBrands = brands.filter((brand) => !normalizedQuery || brand.toLowerCase().includes(normalizedQuery));
+
+  const styleCollections = brandStyleCollections
+    .map((collection) => ({
+      ...collection,
+      brands: collection.brands.filter((brand) => brands.includes(brand) && (!normalizedQuery || brand.toLowerCase().includes(normalizedQuery))),
+    }))
+    .filter((collection) => collection.brands.length);
+
+  if (styleCollections.length) {
+    const styleSection = document.createElement("div");
+    styleSection.className = "brandStyleCollections";
+
+    for (const collection of styleCollections) {
+      const button = document.createElement("button");
+      const count = document.createElement("span");
+      const allSelected = collection.brands.every((brand) => selectedBrands.has(brand));
+      button.type = "button";
+      button.className = allSelected ? "brandStyleButton active" : "brandStyleButton";
+      button.textContent = collection.label;
+      count.className = "brandStyleCount";
+      count.textContent = String(collection.brands.length);
+      button.append(document.createTextNode(" "), count);
+      button.addEventListener("click", () => {
+        selectedBrands = new Set(collection.brands);
+        populateFilters(allFinds);
+        render();
+      });
+      styleSection.append(button);
+    }
+
+    directory.append(styleSection);
+  }
+
   const letters = [...new Set(visibleBrands.map((brand) => brand[0].toUpperCase()).filter((letter) => /[A-Z]/.test(letter)))];
   const letterNav = document.createElement("div");
   letterNav.className = "brandLetters";
@@ -861,8 +1115,16 @@ function renderSourceList(sources) {
     button.className = selectedSources.has(source) ? "sourceOption selected" : "sourceOption";
     const checkbox = document.createElement("span");
     const label = document.createElement("span");
+    label.className = "sourceOptionLabel";
     checkbox.className = "sourceCheck";
     label.textContent = source;
+    if (trustedStoreSources.has(source)) {
+      const badge = document.createElement("span");
+      badge.className = "trustedStoreBadge";
+      badge.textContent = "Trusted";
+      badge.title = "LexiMom has ordered here";
+      label.append(document.createTextNode(" "), badge);
+    }
     button.append(checkbox, label);
     button.addEventListener("click", () => {
       if (selectedSources.has(source)) selectedSources.delete(source);
@@ -1031,7 +1293,10 @@ function renderRefreshReport(data) {
 }
 
 function applyData(data, labelPrefix = "Cached") {
-  allFinds = (data.finds || []).filter((find) => !hasAbnormalPrice(find));
+  allFinds = (data.finds || [])
+    .filter((find) => !hasAbnormalPrice(find))
+    .map((find, index) => ({ ...find, sortIndex: index }));
+  if (labelPrefix !== "Refreshing") latestCompleteData = cloneDataSnapshot(data);
   allBrands = (data.brands || []).map((item) => item.brand).filter(Boolean);
   brandTypes = new Map((data.brands || []).map((item) => [item.brand, item.type || "clothes"]));
   allSources = (data.sources || []).map((item) => item.source).filter(Boolean);
@@ -1066,7 +1331,8 @@ function applyData(data, labelPrefix = "Cached") {
   if (!priceDropCount) priceDropsOnly = false;
   newOnlyButton.hidden = !newCount;
   priceDropsButton.hidden = !priceDropCount;
-  updatedEl.textContent = `${labelPrefix} ${new Date(data.updatedAt).toLocaleString()} · scanned ${data.scanned} products${newText}${priceDropText}`;
+  const sourceText = sourceLabelText(data);
+  updatedEl.textContent = `${labelPrefix} ${new Date(data.updatedAt).toLocaleString()} · ${sourceText} · scanned ${data.scanned} products${newText}${priceDropText}`;
   renderRefreshReport(data);
   updateAdminControls();
   renderPromoBoard();
@@ -1076,7 +1342,7 @@ function applyData(data, labelPrefix = "Cached") {
 function filteredFinds() {
   const query = searchInput.value.trim().toLowerCase();
   const minDiscount = Number.parseFloat(choiceValue("discount"));
-  return allFinds.filter((find) => {
+  return sortFinds(allFinds.filter((find) => {
     const isShoe = isShoeFind(find);
     if (newOnly && !find.isNew) return false;
     if (priceDropsOnly && !(find.priceComparison?.priceDelta < -0.01)) return false;
@@ -1089,7 +1355,7 @@ function filteredFinds() {
     if (!matchingSizes(find).length) return false;
     if (query && !textFor(find).includes(query)) return false;
     return true;
-  });
+  }));
 }
 
 function render() {
@@ -1156,28 +1422,45 @@ function render() {
 
 async function loadFinds(force = false) {
   if (force && !adminRefreshToken() && !unlockAdminRefresh()) return;
+  if (activeLoadController) activeLoadController.abort();
   const refreshSourceNames = force ? [...selectedSources] : [];
+  if (force) {
+    refreshBackupData = cloneDataSnapshot(latestCompleteData);
+    refreshInProgress = true;
+  }
   refreshButton.disabled = true;
   refreshButton.textContent = refreshSourceNames.length ? "Refreshing selected..." : "Refreshing...";
   updatedEl.textContent = force
     ? (refreshSourceNames.length ? `Refreshing ${refreshSourceNames.length} selected store${refreshSourceNames.length === 1 ? "" : "s"}...` : "Refreshing from stores...")
     : "Loading saved products...";
-  if (force) {
-    allFinds = [];
-    render();
-  }
+  updateAdminControls();
   try {
     const params = new URLSearchParams({ minDiscount: String(loadedMinDiscount) });
+    params.set("_", String(Date.now()));
     if (force) params.set("refresh", "1");
     if (force && refreshSourceNames.length) params.set("sources", refreshSourceNames.join("|"));
     const headers = {};
     if (force) headers["x-admin-refresh-token"] = adminRefreshToken();
     const controller = new AbortController();
+    activeLoadController = controller;
     const timeoutId = window.setTimeout(() => controller.abort(), force ? 60000 : 15000);
-    const response = await fetch(`/api/finds/stream?${params}`, { headers, signal: controller.signal });
+    const endpoint = force ? `/api/finds/stream?${params}` : `/api/finds?${params}`;
+    const response = await fetch(endpoint, { headers, signal: controller.signal });
     window.clearTimeout(timeoutId);
     if (response.status === 401) throw new Error("Admin unlock required to refresh.");
-    if (!response.ok || !response.body) throw new Error("Could not load finds");
+    if (!response.ok) throw new Error("Could not load finds");
+
+    if (!force) {
+      hideProgress();
+      const data = await response.json();
+      if (looksLikeBrokenSavedData(data)) {
+        throw new Error("Saved products did not load correctly. Please restart the local site once, then refresh this page.");
+      }
+      applyData(data, "Saved");
+      return;
+    }
+
+    if (!response.body) throw new Error("Could not load finds");
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -1209,12 +1492,20 @@ async function loadFinds(force = false) {
           applyData(event.data, "Saved");
           setProgress(1, 1, "Refresh complete");
           window.setTimeout(hideProgress, 1200);
+          refreshBackupData = null;
+          refreshInProgress = false;
         }
       }
 
       if (done) break;
     }
   } catch (error) {
+    if (error.name === "AbortError" && force) {
+      if (refreshBackupData) applyData(refreshBackupData, "Cached");
+      updatedEl.textContent = "Refresh stopped. Showing the last saved results.";
+      hideProgress();
+      return;
+    }
     if (/admin unlock|required|unauthorized/i.test(error.message)) lockAdminRefresh();
     const message = error.name === "AbortError"
       ? "Could not connect to the local server. Please restart the site and refresh this page."
@@ -1223,6 +1514,8 @@ async function loadFinds(force = false) {
     updatedEl.textContent = "Could not load products.";
     hideProgress();
   } finally {
+    activeLoadController = null;
+    refreshInProgress = false;
     refreshButton.disabled = false;
     updateAdminControls();
   }
@@ -1230,12 +1523,6 @@ async function loadFinds(force = false) {
 
 clearBrandsButton.addEventListener("click", () => {
   selectedBrands.clear();
-  populateFilters(allFinds);
-  render();
-});
-
-favoriteBrandsButton.addEventListener("click", () => {
-  selectedBrands = new Set(favoriteBrands.filter((brand) => allBrands.includes(brand)));
   populateFilters(allFinds);
   render();
 });
@@ -1317,6 +1604,7 @@ for (const input of [searchInput]) {
 searchInput.addEventListener("input", updateSearchPanel);
 adminUnlockButton.addEventListener("click", unlockAdminRefresh);
 refreshButton.addEventListener("click", () => loadFinds(true));
+stopRefreshButton.addEventListener("click", stopRefresh);
 promoToggleButton.addEventListener("click", () => {
   promosOpen = !promosOpen;
   renderPromoBoard();

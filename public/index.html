@@ -39,6 +39,7 @@
         </div>
         <button id="adminUnlockButton" class="ghostButton adminUnlockButton" type="button">Admin unlock</button>
         <button id="refreshButton" type="button" hidden>Refresh latest</button>
+        <button id="stopRefreshButton" class="ghostButton stopRefreshButton" type="button" hidden>Stop refresh</button>
         <div class="reportMenu">
           <button id="reportToggleButton" class="ghostButton reportToggleButton" type="button" aria-expanded="false" hidden>Refresh report</button>
           <section id="refreshReport" class="refreshReport" aria-label="Refresh report" hidden>
@@ -62,7 +63,6 @@
           <div class="filterHead">
             <span>Brand</span>
             <div class="filterActions">
-              <button id="favoriteBrandsButton" class="ghostButton" type="button">My picks</button>
               <button id="clearBrandsButton" class="ghostButton" type="button" hidden>Clear</button>
             </div>
           </div>
@@ -84,6 +84,14 @@
             <span id="toggleSourcesButton" class="choiceHint">Choose</span>
           </button>
           <div id="sourceList" class="sourceList sourcePicker" aria-label="Sources" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Sort</span></div>
+          <button id="sortToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="sortSummary" class="choiceSummary">Date, new to old</strong>
+            <span id="toggleSortButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="sortList" class="sourceList choiceList" aria-label="Sort" hidden></div>
         </div>
         <div class="filterGroup choiceFilter singleChoiceFilter">
           <div class="filterHead"><span>Discount</span></div>

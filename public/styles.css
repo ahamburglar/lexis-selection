@@ -71,7 +71,8 @@ body {
 
 .promoToggleButton,
 .adminUnlockButton,
-.reportToggleButton {
+.reportToggleButton,
+.stopRefreshButton {
   gap: 8px;
   border: 1px solid #e4d8ca;
   background: rgba(255, 253, 248, 0.88);
@@ -88,10 +89,19 @@ body {
 
 .promoToggleButton:hover,
 .adminUnlockButton:hover,
-.reportToggleButton:hover {
+.reportToggleButton:hover,
+.stopRefreshButton:hover {
   border-color: #d8bfaf;
   background: #fffdf8;
   color: var(--ink);
+}
+
+.stopRefreshButton {
+  color: #9a3f2e;
+}
+
+#stopRefreshButton[hidden] {
+  display: none;
 }
 
 .adminUnlockButton {
@@ -180,13 +190,13 @@ button:disabled {
 }
 
 main {
-  padding: 22px 32px 40px;
+  padding: 22px 24px 40px;
 }
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(200px, 1.1fr) minmax(145px, 0.78fr) minmax(110px, 0.58fr) minmax(110px, 0.6fr) minmax(105px, 0.56fr) minmax(125px, 0.68fr) minmax(165px, 0.9fr) 46px;
-  gap: 14px;
+  grid-template-columns: minmax(186px, 1.22fr) minmax(148px, 1fr) repeat(6, minmax(88px, 0.68fr)) 38px;
+  gap: 6px;
   align-items: start;
   margin-bottom: 18px;
 }
@@ -210,8 +220,12 @@ label,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   min-height: 24px;
+}
+
+.filterHead > span {
+  white-space: nowrap;
 }
 
 .filterActions {
@@ -234,13 +248,13 @@ label,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   min-width: 0;
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 0 12px;
+  padding: 0 8px;
   background: var(--panel);
   color: var(--muted);
   text-align: left;
@@ -259,7 +273,7 @@ label,
   flex: 1 1 auto;
   min-width: 0;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.2;
   overflow: hidden;
@@ -271,7 +285,7 @@ label,
 .choiceHint {
   flex: 0 0 auto;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -294,11 +308,12 @@ label,
 .searchFilter {
   position: relative;
   align-self: end;
+  justify-self: start;
 }
 
 .iconButton {
   position: relative;
-  width: 42px;
+  width: 38px;
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -468,6 +483,12 @@ input {
   width: max(100%, min(220px, calc(100vw - 64px)));
 }
 
+#shoeSizeList {
+  left: auto;
+  right: 0;
+  width: min(240px, calc(100vw - 36px));
+}
+
 .sourceList[hidden] {
   display: none;
 }
@@ -485,6 +506,13 @@ input {
   text-align: left;
   font-size: 13px;
   font-weight: 800;
+}
+
+.sourceOptionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .sourceCheck {
@@ -595,6 +623,50 @@ input {
 .brandLetters button:hover {
   background: #f6ded7;
   color: var(--accent);
+}
+
+.brandStyleCollections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+}
+
+.brandStyleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  border: 1px solid #eadbcf;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #fffdfa;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+
+.brandStyleButton:hover,
+.brandStyleButton.active {
+  border-color: #e7b5a7;
+  background: #fff5f1;
+  color: var(--accent);
+}
+
+.brandStyleCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 999px;
+  padding: 0 5px;
+  background: #f6ded7;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .brandSection {

@@ -9,9 +9,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.PORT || 5173);
 const ADMIN_REFRESH_TOKEN = process.env.ADMIN_REFRESH_TOKEN || "";
+const STORE_REFRESH_CONCURRENCY = Math.max(1, Number(process.env.STORE_REFRESH_CONCURRENCY || 3) || 3);
 
 const brandFile = path.join(__dirname, "brands.json");
 const productCacheFile = path.join(__dirname, "work", "product-cache.json");
+const productCacheTempFile = path.join(__dirname, "work", "product-cache.tmp.json");
+const snapshotFile = path.join(__dirname, "deploy", "snapshot.json");
 const brandList = JSON.parse(await fs.readFile(brandFile, "utf8"));
 const targetBrands = new Set(brandList.map((brand) => brand.name));
 const brandCollections = [...new Set(brandList.flatMap((brand) => brand.collections || []))];
@@ -113,6 +116,11 @@ const stores = [
   {
     source: "Hello Alyss",
     baseUrl: "https://www.hello-alyss.com",
+    mode: "all-products",
+  },
+  {
+    source: "Hello Little Crew",
+    baseUrl: "https://hellolittlecrew.com",
     mode: "all-products",
   },
   {
@@ -307,6 +315,86 @@ const stores = [
     mode: "all-products",
   },
   {
+    source: "Ellou",
+    baseUrl: "https://www.shopellou.com",
+    mode: "all-products",
+  },
+  {
+    source: "Little-ish",
+    baseUrl: "https://shop.little-ish.com",
+    mode: "all-products",
+  },
+  {
+    source: "Klade Children's Boutique",
+    baseUrl: "https://kladechildren.com",
+    mode: "all-products",
+  },
+  {
+    source: "Willkie's",
+    baseUrl: "https://shopwillkies.com",
+    mode: "all-products",
+  },
+  {
+    source: "Threadfare",
+    baseUrl: "https://www.threadfare.com",
+    mode: "all-products",
+  },
+  {
+    source: "Fussy Mussy",
+    baseUrl: "https://fussymussycb.com",
+    mode: "all-products",
+  },
+  {
+    source: "Alexa James Baby",
+    baseUrl: "https://www.alexajbaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Marigold Modern",
+    baseUrl: "https://shop.marigoldmodern.com",
+    mode: "all-products",
+  },
+  {
+    source: "Murray & Finn",
+    baseUrl: "https://murrayandfinn.com",
+    mode: "all-products",
+  },
+  {
+    source: "Cub Shrub",
+    baseUrl: "https://cubshrub.com",
+    mode: "all-products",
+  },
+  {
+    source: "Broomtail Kids",
+    baseUrl: "https://broomtailkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Danrie",
+    baseUrl: "https://shopdanrie.com",
+    mode: "all-products",
+  },
+  {
+    source: "Smoochie Baby",
+    baseUrl: "https://smoochiebaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Dreams of Cuteness",
+    baseUrl: "https://www.dreamsofcuteness.com",
+    mode: "all-products",
+  },
+  {
+    source: "Ely's & Co",
+    baseUrl: "https://elysandco.com",
+    mode: "all-products",
+  },
+  {
+    source: "Two Tulips",
+    baseUrl: "https://twotulips.com",
+    mode: "all-products",
+  },
+  {
     source: "Smallable",
     baseUrl: "https://www.smallable.com",
     mode: "smallable-sale",
@@ -315,7 +403,7 @@ const stores = [
   },
 ];
 
-let productCache = { at: 0, items: [], sources: [] };
+let productCache = null;
 let productCacheRefresh = null;
 
 function compactProduct(product) {
@@ -346,7 +434,14 @@ function compactProduct(product) {
 }
 
 function cacheIsUsable(cache) {
-  return cache && Number.isFinite(cache.at) && Array.isArray(cache.items) && Array.isArray(cache.sources);
+  return (
+    cache
+    && Number.isFinite(cache.at)
+    && cache.at > 0
+    && Array.isArray(cache.items)
+    && Array.isArray(cache.sources)
+    && cache.sources.length > 0
+  );
 }
 
 function localDateKey(time = Date.now()) {
@@ -372,9 +467,31 @@ async function readProductCacheFile() {
   }
 }
 
+async function readSavedSnapshotFile() {
+  try {
+    const text = await fs.readFile(snapshotFile, "utf8");
+    const snapshot = JSON.parse(text);
+    if (
+      snapshot
+      && typeof snapshot === "object"
+      && Array.isArray(snapshot.finds)
+      && Array.isArray(snapshot.sources)
+      && Array.isArray(snapshot.brands)
+    ) {
+      return snapshot;
+    }
+    return null;
+  } catch (error) {
+    if (error.code !== "ENOENT") console.warn(`Could not read saved snapshot: ${error.message}`);
+    return null;
+  }
+}
+
 async function writeProductCacheFile(cache) {
   await fs.mkdir(path.dirname(productCacheFile), { recursive: true });
-  await fs.writeFile(productCacheFile, JSON.stringify(cache), "utf8");
+  const serialized = JSON.stringify(cache);
+  await fs.writeFile(productCacheTempFile, serialized, "utf8");
+  await fs.rename(productCacheTempFile, productCacheFile);
 }
 
 function normalizeBrand(vendor = "") {
@@ -999,10 +1116,21 @@ function priceComparisonsFromCaches(currentCache, previousCache, minDiscount) {
 function buildScanReport(cache, minDiscount, finds = null) {
   const visibleFinds = finds || findsFromCache(cache, minDiscount);
   const sources = cache.sources || [];
-  const refreshedSources = sources.filter((source) => source.scanStatus !== "cached");
+  const sourceFetchFailed = (source) => (
+    source.scanStatus === "failed"
+    || source.scanStatus === "dns_failed"
+    || /\bfetch failed\b|\bENOTFOUND\b|getaddrinfo|curl\b/i.test(source.scanReason || "")
+    || (Number(source.scanned || 0) === 0 && /promo scan did not run/i.test(source.promoReason || ""))
+  );
+  const refreshedSources = sources.filter((source) => source.scanStatus !== "cached" && source.scanStatus !== "dns_failed");
   const promoFound = sources.filter((source) => sanitizeStorePromoNote(source.source, source.promoNote || "")).length;
-  const failedStores = sources.filter((source) => source.scanStatus === "failed" || source.promoStatus === "failed");
-  const noPromoStores = sources.filter((source) => !sanitizeStorePromoNote(source.source, source.promoNote || "") && source.promoStatus !== "failed");
+  const failedStores = sources.filter((source) => sourceFetchFailed(source) || source.promoStatus === "failed");
+  const dnsFailedStores = sources.filter((source) => source.scanStatus === "dns_failed");
+  const noPromoStores = sources.filter((source) => (
+    !sourceFetchFailed(source)
+    && !sanitizeStorePromoNote(source.source, source.promoNote || "")
+    && source.promoStatus !== "failed"
+  ));
   const newCount = visibleFinds.filter((find) => find.isNew).length;
   const priceDropCount = visibleFinds.filter((find) => find.priceComparison?.priceDelta < -0.01).length;
 
@@ -1017,6 +1145,11 @@ function buildScanReport(cache, minDiscount, finds = null) {
     priceDrops: priceDropCount,
     promoFound,
     promoMissing: Math.max(0, stores.length - promoFound),
+    dnsFailedStores: dnsFailedStores.length,
+    dnsFailedStoreDetails: dnsFailedStores.map((source) => ({
+      source: source.source,
+      reason: source.scanReason || "DNS lookup failed; previous data was kept.",
+    })),
     noPromoStores: noPromoStores.map((source) => ({
       source: source.source,
       reason: source.promoReason || "No promo found.",
@@ -1105,6 +1238,8 @@ function snapshotFromCache(cache, minDiscount) {
   return {
     updatedAt: new Date(cache.at).toISOString(),
     cacheDate: localDateKey(cache.at),
+    cacheSource: cache.recoveredFromSnapshot ? "snapshot-fallback" : "live-cache",
+    cacheSourceLabel: cache.recoveredFromSnapshot ? "Snapshot fallback" : "Live cache",
     scanned: cache.items.length,
     count: finds.length,
     minDiscount,
@@ -1124,12 +1259,117 @@ function snapshotFromCache(cache, minDiscount) {
   };
 }
 
+function emptySnapshot(minDiscount, reason = "No saved cache yet.") {
+  return {
+    updatedAt: new Date(0).toISOString(),
+    cacheDate: "",
+    cacheSource: "empty",
+    cacheSourceLabel: "Empty",
+    scanned: 0,
+    count: 0,
+    minDiscount,
+    finds: [],
+    brands: brandList.map((brand) => ({ brand: brand.name, type: brand.type || "clothes" })),
+    sources: stores.map((store) => ({
+      source: store.source,
+      baseUrl: store.baseUrl,
+      scanned: 0,
+      promoNote: store.promoNote || "",
+      scanStatus: "pending",
+      scanReason: reason,
+      promoStatus: store.promoNote ? "found" : "not_found",
+      promoReason: store.promoNote ? "Manual store note." : reason,
+    })),
+    report: {
+      totalStores: stores.length,
+      completedStores: 0,
+      refreshedStores: 0,
+      failedStores: 0,
+      productsScanned: 0,
+      finds: 0,
+      newFinds: 0,
+      priceDrops: 0,
+      promoFound: 0,
+      promoMissing: stores.length,
+      noPromoStores: [],
+      failedStoreDetails: [],
+    },
+  };
+}
+
 async function loadFreshDailyCache() {
   if (cacheIsFreshToday(productCache)) return productCache;
 
   const diskCache = await readProductCacheFile();
   if (cacheIsFreshToday(diskCache)) {
     productCache = diskCache;
+    return productCache;
+  }
+
+  return null;
+}
+
+function cacheFromSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object" || !Array.isArray(snapshot.finds)) return null;
+  const sourceDetails = new Map(
+    (snapshot.sources || [])
+      .filter((source) => source && source.source)
+      .map((source) => [source.source, source]),
+  );
+  const storeBySource = new Map(stores.map((store) => [store.source, store]));
+
+  const items = (snapshot.finds || [])
+    .map((find) => {
+      const store = storeBySource.get(find.source);
+      const product = snapshotFindToProduct(find);
+      if (!store || !product) return null;
+      return { store, product };
+    })
+    .filter(Boolean);
+
+  const sources = stores.map((store) => {
+    const detail = sourceDetails.get(store.source) || {};
+    const scanned = Number(detail.scanned);
+    return {
+      source: store.source,
+      scanned: Number.isFinite(scanned) ? scanned : items.filter((item) => item.store.source === store.source).length,
+      promoNote: detail.promoNote || store.promoNote || "",
+      scanStatus: detail.scanStatus || "cached",
+      scanReason: detail.scanReason || "Recovered from saved snapshot.",
+      promoStatus: detail.promoStatus || ((detail.promoNote || store.promoNote) ? "found" : "not_found"),
+      promoReason: detail.promoReason || ((detail.promoNote || store.promoNote) ? "Recovered from saved snapshot." : "Recovered from saved snapshot with no promo text."),
+    };
+  });
+
+  const timestamp = Date.parse(snapshot.updatedAt || "");
+  const at = Number.isFinite(timestamp) && timestamp > 0 ? timestamp : Date.now();
+  const recoveredCache = {
+    at,
+    items,
+    sources,
+    newFindIds: [],
+    priceComparisons: [],
+    recoveredFromSnapshot: true,
+  };
+  return cacheIsUsable(recoveredCache) ? recoveredCache : null;
+}
+
+async function loadLatestAvailableCache() {
+  if (cacheIsUsable(productCache)) return productCache;
+
+  const diskCache = await readProductCacheFile();
+  if (cacheIsUsable(diskCache)) {
+    productCache = diskCache;
+    return productCache;
+  }
+
+  const savedSnapshot = await readSavedSnapshotFile();
+  const recoveredCache = cacheFromSnapshot(savedSnapshot);
+  if (cacheIsUsable(recoveredCache)) {
+    productCache = recoveredCache;
+    await writeProductCacheFile(recoveredCache).catch((error) => {
+      console.warn(`Could not rebuild local product cache from snapshot: ${error.message}`);
+    });
     return productCache;
   }
 
@@ -1158,8 +1398,89 @@ function cachedBatchForStore(store, previousCache) {
   };
 }
 
+function snapshotFindToProduct(find) {
+  const handle = String(find.id || "").includes(":")
+    ? String(find.id).slice(String(find.id).indexOf(":") + 1)
+    : (find.url?.split("/products/")[1]?.split(/[?#]/)[0] || find.id || find.title || "");
+  const variants = (Array.isArray(find.sizeOptions) && find.sizeOptions.length ? find.sizeOptions : [{
+    size: find.bestSize || find.sizes?.[0] || "Size unknown",
+    salePrice: find.salePrice,
+    originalPrice: find.originalPrice,
+  }]).map((option) => ({
+    title: option.size || "Size unknown",
+    option1: option.size || "Size unknown",
+    price: String(option.salePrice ?? find.salePrice ?? ""),
+    compare_at_price: String(option.originalPrice ?? find.originalPrice ?? ""),
+    available: true,
+  }));
+
+  return {
+    id: handle,
+    handle,
+    title: find.title || "",
+    vendor: find.brand || "",
+    product_type: find.category || "",
+    tags: [find.gender || ""].filter(Boolean),
+    url: find.url || "",
+    image: find.image ? { src: find.image } : undefined,
+    images: find.image ? [{ src: find.image }] : [],
+    variants,
+  };
+}
+
+function previousStoreState(store, previousCache, fallbackSnapshot = null) {
+  if (previousCache) {
+    const previousSource = (previousCache.sources || []).find((source) => source.source === store.source) || null;
+    const products = (previousCache.items || [])
+      .filter((item) => item.store?.source === store.source)
+      .map((item) => item.product)
+      .filter(Boolean);
+    if (products.length) return { previousSource, products };
+    if (previousSource && previousSource.scanned > 0) return { previousSource, products };
+  }
+
+  if (fallbackSnapshot) {
+    const previousSource = (fallbackSnapshot.sources || []).find((source) => source.source === store.source) || null;
+    const products = (fallbackSnapshot.finds || [])
+      .filter((find) => find.source === store.source)
+      .map(snapshotFindToProduct)
+      .filter(Boolean);
+    if (previousSource || products.length) return { previousSource, products };
+  }
+
+  return null;
+}
+
+function isDnsFetchError(error) {
+  const code = error?.cause?.code || error?.code || "";
+  const message = `${error?.message || ""} ${error?.cause?.message || ""}`;
+  return code === "ENOTFOUND" || /\bENOTFOUND\b|getaddrinfo/i.test(message);
+}
+
+function isTimeoutFetchError(error) {
+  const code = error?.cause?.code || error?.code || "";
+  const message = `${error?.message || ""} ${error?.cause?.message || ""}`;
+  return code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT" || /timed?\s*out|timeout/i.test(message);
+}
+
+function isCurlTimeoutError(error) {
+  const message = `${error?.message || ""} ${error?.stderr || ""}`;
+  return /curl\b/i.test(message) && /--max-time|timed?\s*out|operation timed out/i.test(message);
+}
+
+function formatFetchError(error) {
+  const code = error?.cause?.code || error?.code || "";
+  const message = `${error?.message || ""} ${error?.cause?.message || ""}`.trim();
+  if (isDnsFetchError(error)) return `DNS failed${code ? ` (${code})` : ""}`;
+  if (isCurlTimeoutError(error)) return "curl timeout";
+  if (isTimeoutFetchError(error)) return `request timeout${code ? ` (${code})` : ""}`;
+  if (message) return message;
+  return "fetch failed";
+}
+
 async function fetchFreshProductCache(onStore, { previousCache = null, minDiscount = 0.4, selectedSources = null } = {}) {
   const selectedSourceSet = selectedSources?.size ? selectedSources : null;
+  const fallbackSnapshot = await readSavedSnapshotFile();
   const storesToRefresh = selectedSourceSet ? stores.filter((store) => selectedSourceSet.has(store.source)) : stores;
   const storeBatches = selectedSourceSet
     ? stores
@@ -1168,11 +1489,14 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
       .filter(Boolean)
     : [];
   let completed = 0;
+  let nextStoreIndex = 0;
 
-  for (const store of storesToRefresh) {
+  async function refreshOneStore(store) {
     let products = [];
     let error = null;
     let promoResult = { promoNote: "", promoStatus: "not_found", promoReason: "Promo scan did not run." };
+    let scanStatus = "ok";
+    let scanReason = "";
     try {
       const result = await Promise.allSettled([
         fetchStoreProducts(store),
@@ -1183,12 +1507,29 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
       if (result[1].status === "fulfilled") promoResult = result[1].value;
       else promoResult = { promoNote: "", promoStatus: "failed", promoReason: result[1].reason?.message || "Promo scan failed." };
     } catch (fetchError) {
-      error = fetchError;
-      console.warn(`Failed to fetch ${store.source}: ${fetchError.message}`);
+      if (isDnsFetchError(fetchError)) {
+        const previous = previousStoreState(store, previousCache, fallbackSnapshot);
+        if (previous) {
+          products = previous.products;
+          promoResult = {
+            promoNote: previous.previousSource?.promoNote || "",
+            promoStatus: previous.previousSource?.promoStatus || (previous.previousSource?.promoNote ? "found" : "not_found"),
+            promoReason: previous.previousSource?.promoReason || "Kept from previous cache after DNS failed.",
+          };
+          scanStatus = "dns_failed";
+          scanReason = `DNS failed; kept previous data. ${formatFetchError(fetchError)}`;
+        } else {
+          error = fetchError;
+          console.warn(`Failed to fetch ${store.source}: ${formatFetchError(fetchError)}`);
+        }
+      } else {
+        error = fetchError;
+        console.warn(`Failed to fetch ${store.source}: ${formatFetchError(fetchError)}`);
+      }
     }
 
     completed += 1;
-    const batch = { store, products, promoResult, error };
+    const batch = { store, products, promoResult, error, scanStatus, scanReason };
     storeBatches.push(batch);
     if (onStore) {
       await onStore({
@@ -1202,6 +1543,17 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
     }
   }
 
+  async function worker() {
+    while (nextStoreIndex < storesToRefresh.length) {
+      const currentIndex = nextStoreIndex;
+      nextStoreIndex += 1;
+      await refreshOneStore(storesToRefresh[currentIndex]);
+    }
+  }
+
+  const workerCount = Math.min(STORE_REFRESH_CONCURRENCY, storesToRefresh.length || 1);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
   productCache = cacheFromStoreBatches(storeBatches, { previousCache, minDiscount });
   await writeProductCacheFile(productCache).catch((error) => {
     console.warn(`Could not write local product cache: ${error.message}`);
@@ -1211,8 +1563,8 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
 
 async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSources = null) {
   if (!force) {
-    const freshCache = await loadFreshDailyCache();
-    if (freshCache) return freshCache;
+    const savedCache = await loadLatestAvailableCache();
+    if (savedCache) return savedCache;
   }
 
   if (productCacheRefresh && !selectedSources?.size) return productCacheRefresh;
@@ -1228,6 +1580,12 @@ async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSou
 }
 
 async function latestFinds({ force = false, minDiscount = 0.7, selectedSources = null } = {}) {
+  if (!force && !selectedSources?.size) {
+    const savedCache = await loadLatestAvailableCache();
+    if (savedCache) return snapshotFromCache(savedCache, minDiscount);
+    const savedSnapshot = await readSavedSnapshotFile();
+    if (savedSnapshot) return savedSnapshot;
+  }
   const cached = await cachedStoreProducts(force, minDiscount, selectedSources);
   return snapshotFromCache(cached, minDiscount);
 }
@@ -1240,12 +1598,15 @@ async function streamFinds(res, { force = false, minDiscount = 0.7, selectedSour
   const send = (payload) => res.write(`${JSON.stringify(payload)}\n`);
 
   if (!force) {
-    const freshCache = await loadFreshDailyCache();
-    if (freshCache) {
-      send({ type: "cache", data: snapshotFromCache(freshCache, minDiscount) });
+    const savedCache = await loadLatestAvailableCache();
+    if (savedCache) {
+      send({ type: "cache", data: snapshotFromCache(savedCache, minDiscount) });
       res.end();
       return;
     }
+    send({ type: "cache", data: emptySnapshot(minDiscount) });
+    res.end();
+    return;
   }
 
   const previousCache = await readProductCacheFile();
@@ -1278,7 +1639,10 @@ async function sendStatic(res, pathname) {
     const file = await fs.readFile(filePath);
     const ext = path.extname(filePath);
     const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
-    res.writeHead(200, { "content-type": types[ext] || "application/octet-stream" });
+    res.writeHead(200, {
+      "content-type": types[ext] || "application/octet-stream",
+      "cache-control": "no-store",
+    });
     res.end(file);
   } catch {
     res.writeHead(404);

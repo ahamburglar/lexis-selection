@@ -122,26 +122,6 @@
     "type": "clothes"
   },
   {
-    "name": "Loud",
-    "matches": [
-      "loud"
-    ],
-    "collections": [
-      "loud"
-    ],
-    "type": "clothes"
-  },
-  {
-    "name": "Piupiuchick",
-    "matches": [
-      "piupiuchick"
-    ],
-    "collections": [
-      "piupiuchick"
-    ],
-    "type": "clothes"
-  },
-  {
     "name": "Oilily",
     "matches": [
       "oilily"
@@ -239,16 +219,6 @@
     ],
     "collections": [
       "bonton"
-    ],
-    "type": "clothes"
-  },
-  {
-    "name": "Molo",
-    "matches": [
-      "molo"
-    ],
-    "collections": [
-      "molo"
     ],
     "type": "clothes"
   },
@@ -395,12 +365,6 @@
     "type": "clothes"
   },
   {
-    "name": "Paade Mode",
-    "matches": ["paade mode"],
-    "collections": ["paade-mode"],
-    "type": "clothes"
-  },
-  {
     "name": "Petit Bateau",
     "matches": ["petit bateau"],
     "collections": ["petit-bateau"],
@@ -452,12 +416,6 @@
     "name": "The New Society",
     "matches": ["the new society"],
     "collections": ["the-new-society"],
-    "type": "clothes"
-  },
-  {
-    "name": "Wolf & Rita",
-    "matches": ["wolf & rita", "wolf and rita"],
-    "collections": ["wolf-rita", "wolf-and-rita"],
     "type": "clothes"
   }
 ]
