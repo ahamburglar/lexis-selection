@@ -1733,6 +1733,11 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const contentType = response.headers.get("content-type") || "image/jpeg";
+      if (!contentType.toLowerCase().startsWith("image/")) {
+        res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Image proxy received non-image content");
+        return;
+      }
       const arrayBuffer = await response.arrayBuffer();
       res.writeHead(200, {
         "content-type": contentType,

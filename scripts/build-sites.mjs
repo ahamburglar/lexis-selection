@@ -141,11 +141,15 @@ async function imageProxyResponse(url) {
       },
     });
     if (!response.ok) return new Response("Could not fetch image", { status: response.status || 502 });
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      return new Response("Image proxy received non-image content", { status: 502 });
+    }
 
     return new Response(response.body, {
       status: 200,
       headers: {
-        "content-type": response.headers.get("content-type") || "image/jpeg",
+        "content-type": contentType,
         "cache-control": "public, max-age=86400",
       },
     });

@@ -676,14 +676,14 @@ async function backgroundRemovedImageSrc(src = "") {
         canvas.height = loader.naturalHeight;
         const context = canvas.getContext("2d", { willReadFrequently: true });
         if (!context) {
-          resolve(proxySrc);
+          resolve("");
           return;
         }
         context.drawImage(loader, 0, 0);
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const backgroundRemoved = removeConnectedBackground(imageData);
         if (!backgroundRemoved) {
-          resolve(proxySrc);
+          resolve("");
           return;
         }
         context.putImageData(imageData, 0, 0);
@@ -718,10 +718,10 @@ async function backgroundRemovedImageSrc(src = "") {
         );
         resolve(outputCanvas.toDataURL("image/png"));
       } catch {
-        resolve(proxySrc);
+        resolve("");
       }
     };
-    loader.onerror = () => resolve(proxySrc);
+    loader.onerror = () => resolve("");
     loader.src = proxySrc;
   });
 
@@ -1709,7 +1709,7 @@ function render() {
     const openLink = node.querySelector(".openLink");
 
     imgLink.href = find.url;
-    img.src = proxiedImageUrl(find.image);
+    img.src = find.image;
     img.dataset.originalSrc = find.image;
     img.alt = find.title;
     img.addEventListener("error", () => {
