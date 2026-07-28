@@ -125,9 +125,42 @@ function ndjsonResponse(events) {
   });
 }
 
+async function imageProxyResponse(url) {
+  try {
+    const src = url.searchParams.get("src") || "";
+    if (!src) return new Response("Missing image src", { status: 400 });
+    const target = new URL(src);
+    if (!["http:", "https:"].includes(target.protocol)) {
+      return new Response("Unsupported image protocol", { status: 400 });
+    }
+
+    const response = await fetch(target, {
+      headers: {
+        "user-agent": "Mozilla/5.0",
+        accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      },
+    });
+    if (!response.ok) return new Response("Could not fetch image", { status: response.status || 502 });
+
+    return new Response(response.body, {
+      status: 200,
+      headers: {
+        "content-type": response.headers.get("content-type") || "image/jpeg",
+        "cache-control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return new Response("Could not fetch image", { status: 502 });
+  }
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/image-proxy") {
+      return imageProxyResponse(url);
+    }
 
     if (url.pathname === "/api/finds") {
       if (url.searchParams.get("refresh") === "1") {
