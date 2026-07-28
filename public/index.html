@@ -13,7 +13,9 @@
     <meta name="twitter:title" content="LexiMom's Selection" />
     <meta name="twitter:description" content="Good brands, smarter prices. Built for the 70% off finds." />
     <meta name="twitter:image" content="/og.png?v=3" />
-    <link rel="icon" type="image/png" href="/favicon.png?v=6" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png?v=7" />
+    <link rel="shortcut icon" href="/favicon.png?v=7" />
+    <link rel="apple-touch-icon" href="/favicon.png?v=7" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -147,6 +149,7 @@
       <section class="status">
         <div class="statusLeft">
           <span><strong id="count">--</strong><span> matches</span></span>
+          <button id="womenOnlyButton" class="ghostButton statusButton" type="button" hidden>Women only</button>
           <button id="newOnlyButton" class="ghostButton statusButton" type="button" hidden>New only</button>
           <button id="priceDropsButton" class="ghostButton statusButton" type="button" hidden>Price drops</button>
         </div>
@@ -166,17 +169,19 @@
     <template id="cardTemplate">
       <article class="card">
         <a class="imageWrap" target="_blank" rel="noreferrer">
-          <img alt="" loading="lazy" />
+          <span class="newBadge" hidden>New</span>
+          <img alt="" />
           <span class="imageFallback">Image unavailable</span>
         </a>
         <div class="cardBody">
           <div class="metaRow">
-            <a class="source" target="_blank" rel="noreferrer"></a>
-            <span class="newBadge" hidden>New</span>
+            <button class="source brandPill" type="button"></button>
           </div>
           <h2></h2>
-          <p class="brand"></p>
-          <p class="promoNote" hidden></p>
+          <div class="storeBlock">
+            <p class="storeLine"><a class="storeLink" target="_blank" rel="noreferrer"></a></p>
+            <p class="promoNote" hidden></p>
+          </div>
           <div class="priceRow">
             <span class="sale"></span>
             <span class="original"></span>

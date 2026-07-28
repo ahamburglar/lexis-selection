@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.PORT || 5173);
 const ADMIN_REFRESH_TOKEN = process.env.ADMIN_REFRESH_TOKEN || "";
 const STORE_REFRESH_CONCURRENCY = Math.max(1, Number(process.env.STORE_REFRESH_CONCURRENCY || 3) || 3);
+const STORE_REFRESH_JITTER_MS = Math.max(0, Number(process.env.STORE_REFRESH_JITTER_MS || 3000) || 3000);
 
 const brandFile = path.join(__dirname, "brands.json");
 const productCacheFile = path.join(__dirname, "work", "product-cache.json");
@@ -18,6 +19,23 @@ const snapshotFile = path.join(__dirname, "deploy", "snapshot.json");
 const brandList = JSON.parse(await fs.readFile(brandFile, "utf8"));
 const targetBrands = new Set(brandList.map((brand) => brand.name));
 const brandCollections = [...new Set(brandList.flatMap((brand) => brand.collections || []))];
+const boutiqueAdultWomenBrands = new Set([
+  "Louise Misha",
+  "Emile et Ida",
+  "Louis Louise",
+  "FUB",
+  "Gray Label",
+  "Tiny Cottons",
+  "Rylee+Cru",
+  "Caramel",
+  "Oilily",
+  "Petit Bateau",
+  "The New Society",
+  "SISSEL EDELBO",
+  "Mabli",
+  "Bonton",
+  "Bebe Organic",
+]);
 
 const stores = [
   {
@@ -864,8 +882,10 @@ function inferGender(product) {
     ...(product.tags || []),
   ].join(" ").toLowerCase();
 
+  const hasWomen = /\b(women|womens|woman|ladies|lady|femme|damen|mujer)\b/.test(text);
   const hasGirls = /\b(girl|girls)\b/.test(text) || text.includes("baby girl");
   const hasBoys = /\b(boy|boys)\b/.test(text) || text.includes("baby boy");
+  if (hasWomen) return "women";
   if (hasGirls && !hasBoys) return "girls";
   if (hasBoys && !hasGirls) return "boys";
   return "neutral";
@@ -879,6 +899,10 @@ function isShoeProduct(product) {
 function isExplicitAdultProduct(product) {
   const text = [product.title, product.product_type, ...(product.tags || [])].join(" ").toLowerCase();
   return /\b(women|womens|woman|ladies|lady|adult|adults|men|mens|men's)\b/.test(text);
+}
+
+function allowsBoutiqueAdultWomen(brand) {
+  return boutiqueAdultWomenBrands.has(brand);
 }
 
 function isAdultClothingSize(size = "") {
@@ -910,7 +934,8 @@ function isAbnormalVariantPrice({ sale, original, discount }) {
 function productToFind(product, store, minDiscount) {
   const brand = detectProductBrand(product);
   if (!targetBrands.has(brand)) return null;
-  if (isExplicitAdultProduct(product)) return null;
+  const adultProduct = isExplicitAdultProduct(product);
+  if (adultProduct && !allowsBoutiqueAdultWomen(brand)) return null;
 
   const shoeProduct = isShoeProduct(product);
 
@@ -938,7 +963,7 @@ function productToFind(product, store, minDiscount) {
       && variant.discount !== null
       && !isAbnormalVariantPrice(variant)
       && displayDiscount(variant.discount) >= minDiscount
-      && (shoeProduct || !isAdultClothingSize(variant.size))
+      && (shoeProduct || adultProduct || !isAdultClothingSize(variant.size))
     ));
 
   if (!variants.length) return null;
@@ -962,7 +987,7 @@ function productToFind(product, store, minDiscount) {
     brand,
     title: product.title,
     category: product.product_type || "",
-    gender: inferGender(product),
+    gender: adultProduct && allowsBoutiqueAdultWomen(brand) ? "women" : inferGender(product),
     salePrice: best.sale,
     originalPrice: best.original,
     currency: store.currency || "USD",
@@ -1543,10 +1568,17 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
     }
   }
 
+  async function sleep(ms) {
+    if (ms <= 0) return;
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function worker() {
     while (nextStoreIndex < storesToRefresh.length) {
       const currentIndex = nextStoreIndex;
       nextStoreIndex += 1;
+      const jitterMs = Math.floor(Math.random() * (STORE_REFRESH_JITTER_MS + 1));
+      await sleep(jitterMs);
       await refreshOneStore(storesToRefresh[currentIndex]);
     }
   }
@@ -1674,6 +1706,45 @@ const server = http.createServer(async (req, res) => {
   const refreshToken = req.headers["x-admin-refresh-token"] || url.searchParams.get("adminToken") || "";
   const refreshAllowed = !ADMIN_REFRESH_TOKEN || refreshToken === ADMIN_REFRESH_TOKEN;
   const selectedSources = selectedSourcesFromUrl(url);
+
+  if (url.pathname === "/api/image-proxy") {
+    try {
+      const src = url.searchParams.get("src") || "";
+      if (!src) {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Missing image src");
+        return;
+      }
+      const target = new URL(src);
+      if (!["http:", "https:"].includes(target.protocol)) {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Unsupported image protocol");
+        return;
+      }
+      const response = await fetch(target, {
+        headers: {
+          "user-agent": "Mozilla/5.0",
+          accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+      });
+      if (!response.ok) {
+        res.writeHead(response.status || 502, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Could not fetch image");
+        return;
+      }
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const arrayBuffer = await response.arrayBuffer();
+      res.writeHead(200, {
+        "content-type": contentType,
+        "cache-control": "public, max-age=86400",
+      });
+      res.end(Buffer.from(arrayBuffer));
+    } catch {
+      res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Could not fetch image");
+    }
+    return;
+  }
 
   if (url.pathname === "/api/finds/stream") {
     try {

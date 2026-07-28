@@ -18,6 +18,7 @@ const refreshButton = document.querySelector("#refreshButton");
 const stopRefreshButton = document.querySelector("#stopRefreshButton");
 const countEl = document.querySelector("#count");
 const updatedEl = document.querySelector("#updated");
+const womenOnlyButton = document.querySelector("#womenOnlyButton");
 const newOnlyButton = document.querySelector("#newOnlyButton");
 const priceDropsButton = document.querySelector("#priceDropsButton");
 const progressWrap = document.querySelector("#progressWrap");
@@ -32,6 +33,16 @@ const promoBoard = document.querySelector("#promoBoard");
 const promoList = document.querySelector("#promoList");
 const promoCount = document.querySelector("#promoCount");
 const promoToggleButton = document.querySelector("#promoToggleButton");
+const backgroundRemovedImageCache = new Map();
+const imageProcessObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      imageProcessObserver.unobserve(entry.target);
+      processCardImage(entry.target);
+    }
+  }, { rootMargin: "900px 0px" })
+  : null;
 
 let allFinds = [];
 let allBrands = [];
@@ -48,6 +59,7 @@ let promosOpen = false;
 let reportOpen = false;
 let reportDetailsOpen = false;
 let latestReportData = null;
+let womenOnly = false;
 let newOnly = false;
 let priceDropsOnly = false;
 let loadedMinDiscount = 0.4;
@@ -471,6 +483,10 @@ const singleChoiceFilters = {
     value: "3-6",
     options: [
       { value: "3-6", label: "3Y-6Y" },
+      { value: "adult-any", label: "Women sizes" },
+      { value: "adult-xs-s", label: "Women XS-S" },
+      { value: "adult-m-l", label: "Women M-L" },
+      { value: "adult-xl-plus", label: "Women XL+" },
       { value: "", label: "Any size" },
       { value: "baby", label: "Baby / toddler" },
       { value: "7plus", label: "7Y+" },
@@ -507,6 +523,228 @@ function pct(value) {
 
 function displayedDiscountValue(value) {
   return Math.round(value * 100) / 100;
+}
+
+function proxiedImageUrl(src = "") {
+  if (!src) return "";
+  return `/api/image-proxy?src=${encodeURIComponent(src)}`;
+}
+
+function backgroundAnchorSample(imageData) {
+  const { data, width, height } = imageData;
+  const samplePoints = [
+    [0, 0],
+    [Math.floor(width / 2), 0],
+    [width - 1, 0],
+    [0, Math.floor(height / 2)],
+    [width - 1, Math.floor(height / 2)],
+    [0, height - 1],
+    [Math.floor(width / 2), height - 1],
+    [width - 1, height - 1],
+  ];
+  const samples = [];
+  const sample = ([x, y]) => {
+    const index = (y * width + x) * 4;
+    const alpha = data[index + 3];
+    if (alpha < 16) return null;
+    return {
+      r: data[index],
+      g: data[index + 1],
+      b: data[index + 2],
+    };
+  };
+
+  for (const point of samplePoints) {
+    const color = sample(point);
+    if (color) samples.push({ point, color });
+  }
+
+  if (samples.length < 6) return null;
+
+  const average = samples.reduce((total, sampleValue) => ({
+    r: total.r + sampleValue.color.r,
+    g: total.g + sampleValue.color.g,
+    b: total.b + sampleValue.color.b,
+  }), { r: 0, g: 0, b: 0 });
+  const color = {
+    r: average.r / samples.length,
+    g: average.g / samples.length,
+    b: average.b / samples.length,
+  };
+
+  const maxAnchorDistance = 24;
+  const consistent = samples.every((sampleValue) => (
+    Math.abs(sampleValue.color.r - color.r)
+    + Math.abs(sampleValue.color.g - color.g)
+    + Math.abs(sampleValue.color.b - color.b)
+  ) <= maxAnchorDistance);
+
+  if (!consistent) return null;
+  return { color, points: samples.map((sampleValue) => sampleValue.point) };
+}
+
+function removeConnectedBackground(imageData) {
+  const { data, width, height } = imageData;
+  const background = backgroundAnchorSample(imageData);
+  if (!background) return false;
+  const visited = new Uint8Array(width * height);
+  const queue = [];
+  const threshold = 16;
+  const luminanceThreshold = 245;
+
+  const matchesBackground = (x, y) => {
+    const index = (y * width + x) * 4;
+    const alpha = data[index + 3];
+    if (alpha < 16) return true;
+    const r = data[index];
+    const g = data[index + 1];
+    const b = data[index + 2];
+    const distance = Math.abs(r - background.color.r) + Math.abs(g - background.color.g) + Math.abs(b - background.color.b);
+    const luminance = (r + g + b) / 3;
+    return distance <= threshold || (distance <= threshold * 1.7 && luminance >= luminanceThreshold);
+  };
+
+  const push = (x, y) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const flatIndex = y * width + x;
+    if (visited[flatIndex]) return;
+    visited[flatIndex] = 1;
+    if (!matchesBackground(x, y)) return;
+    queue.push(flatIndex);
+  };
+
+  for (const [x, y] of background.points) {
+    push(x, y);
+  }
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const flatIndex = queue[index];
+    const x = flatIndex % width;
+    const y = Math.floor(flatIndex / width);
+    const pixelIndex = flatIndex * 4;
+    data[pixelIndex + 3] = 0;
+    push(x + 1, y);
+    push(x - 1, y);
+    push(x, y + 1);
+    push(x, y - 1);
+  }
+  return queue.length > 0;
+}
+
+function alphaBounds(imageData) {
+  const { data, width, height } = imageData;
+  let top = height;
+  let left = width;
+  let right = -1;
+  let bottom = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha < 16) continue;
+      if (x < left) left = x;
+      if (x > right) right = x;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+    }
+  }
+
+  if (right < left || bottom < top) {
+    return { left: 0, top: 0, width, height };
+  }
+
+  return {
+    left,
+    top,
+    width: right - left + 1,
+    height: bottom - top + 1,
+  };
+}
+
+async function backgroundRemovedImageSrc(src = "") {
+  if (!src) return "";
+  if (backgroundRemovedImageCache.has(src)) return backgroundRemovedImageCache.get(src);
+
+  const promise = new Promise((resolve) => {
+    const proxySrc = proxiedImageUrl(src);
+    const loader = new Image();
+    loader.decoding = "async";
+    loader.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = loader.naturalWidth;
+        canvas.height = loader.naturalHeight;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          resolve(proxySrc);
+          return;
+        }
+        context.drawImage(loader, 0, 0);
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const backgroundRemoved = removeConnectedBackground(imageData);
+        if (!backgroundRemoved) {
+          resolve(proxySrc);
+          return;
+        }
+        context.putImageData(imageData, 0, 0);
+        const bounds = alphaBounds(imageData);
+        const targetFill = 0.82;
+        const squareSize = Math.max(
+          32,
+          Math.ceil(Math.max(bounds.width, bounds.height) / targetFill),
+        );
+        const outputCanvas = document.createElement("canvas");
+        outputCanvas.width = squareSize;
+        outputCanvas.height = squareSize;
+        const outputContext = outputCanvas.getContext("2d");
+        if (!outputContext) {
+          resolve(canvas.toDataURL("image/png"));
+          return;
+        }
+        const drawWidth = bounds.width;
+        const drawHeight = bounds.height;
+        const drawX = Math.round((squareSize - drawWidth) / 2);
+        const drawY = Math.round((squareSize - drawHeight) / 2);
+        outputContext.drawImage(
+          canvas,
+          bounds.left,
+          bounds.top,
+          bounds.width,
+          bounds.height,
+          drawX,
+          drawY,
+          drawWidth,
+          drawHeight,
+        );
+        resolve(outputCanvas.toDataURL("image/png"));
+      } catch {
+        resolve(proxySrc);
+      }
+    };
+    loader.onerror = () => resolve(proxySrc);
+    loader.src = proxySrc;
+  });
+
+  backgroundRemovedImageCache.set(src, promise);
+  return promise;
+}
+
+function processCardImage(img) {
+  const originalSrc = img.dataset.originalSrc || "";
+  if (!originalSrc || img.dataset.processingStarted === "1") return;
+  img.dataset.processingStarted = "1";
+  backgroundRemovedImageSrc(originalSrc).then((processedSrc) => {
+    if (!processedSrc || !img.isConnected || img.dataset.originalSrc !== originalSrc) return;
+    img.src = processedSrc;
+  });
+}
+
+function queueCardImageProcessing(img) {
+  if (imageProcessObserver) {
+    imageProcessObserver.observe(img);
+    return;
+  }
+  processCardImage(img);
 }
 
 function priceComparisonText(find) {
@@ -632,6 +870,54 @@ function isBabySize(size = "") {
   return /\b(nb|newborn|preemie)\b/.test(lower) || /\d+\s*-\s*\d+\s*m/.test(lower) || /\d+\s*m\b/.test(lower);
 }
 
+function adultSizeNumbers(size = "") {
+  const lower = size.toLowerCase();
+  const values = [];
+
+  for (const match of lower.matchAll(/\b(?:it|eu|fr)?\s*(3[2-9]|4\d|5\d)\b/g)) {
+    const value = Number(match[1]);
+    if (Number.isFinite(value)) values.push(value);
+  }
+
+  return [...new Set(values)];
+}
+
+function hasAdultLetterSize(size = "") {
+  return /\b(xxs|xs|s\/m|m\/l|small|medium|large|xl|xxl|2xl|3xl|x-large)\b/i.test(size);
+}
+
+function isAdultClothingSize(size = "") {
+  if (!size) return false;
+  if (isBabySize(size)) return false;
+  const years = yearsFromSize(size);
+  if (years.some((year) => year > 0 && year < 18)) return false;
+  if (hasAdultLetterSize(size)) return true;
+  return adultSizeNumbers(size).length > 0;
+}
+
+function isWomenModeActive() {
+  return womenOnly;
+}
+
+function hasAdultSizeOption(find) {
+  return eligibleSizeOptions(find).some((option) => isAdultClothingSize(option.size));
+}
+
+function visibleChoiceOptions(name) {
+  const filter = singleChoiceFilters[name];
+  if (name !== "size") return filter.options;
+  if (isWomenModeActive()) {
+    return filter.options.filter((option) => [
+      "adult-any",
+      "adult-xs-s",
+      "adult-m-l",
+      "adult-xl-plus",
+      "",
+    ].includes(option.value));
+  }
+  return filter.options.filter((option) => !String(option.value).startsWith("adult-"));
+}
+
 function isShoeFind(find) {
   const text = [find.title, find.category].join(" ").toLowerCase();
   return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|loafer|loafers|mary jane|slipper|slippers)\b/.test(text);
@@ -659,6 +945,7 @@ function shoeSizesFromSize(size = "") {
 
 function selectedShoeSizeMatches(size, find) {
   if (!isShoeFind(find)) return false;
+  if (String(choiceValue("size")).startsWith("adult-")) return false;
   const filter = choiceValue("shoeSize");
   if (!filter) return true;
   if (filter === "none") return false;
@@ -682,6 +969,30 @@ function selectedShoeSizeMatches(size, find) {
 function sizeMatches(size, filter, find) {
   if (isShoeFind(find)) return selectedShoeSizeMatches(size, find);
   if (!filter) return true;
+  if (filter === "adult-any") return isAdultClothingSize(size);
+  if (filter === "adult-xs-s") {
+    if (!isAdultClothingSize(size)) return false;
+    const lower = size.toLowerCase();
+    const numbers = adultSizeNumbers(size);
+    return /\b(xxs|xs|small)\b/.test(lower)
+      || /\bs\/m\b/.test(lower)
+      || numbers.some((value) => value <= 36);
+  }
+  if (filter === "adult-m-l") {
+    if (!isAdultClothingSize(size)) return false;
+    const lower = size.toLowerCase();
+    const numbers = adultSizeNumbers(size);
+    return /\b(medium|large)\b/.test(lower)
+      || /\bm\/l\b/.test(lower)
+      || numbers.some((value) => value >= 38 && value <= 42);
+  }
+  if (filter === "adult-xl-plus") {
+    if (!isAdultClothingSize(size)) return false;
+    const lower = size.toLowerCase();
+    const numbers = adultSizeNumbers(size);
+    return /\b(xl|xxl|2xl|3xl|x-large)\b/.test(lower)
+      || numbers.some((value) => value >= 44);
+  }
   const years = yearsFromSize(size);
   if (filter === "3-6") return years.some((year) => year >= 3 && year <= 6);
   if (filter === "7plus") return years.some((year) => year >= 7);
@@ -727,7 +1038,10 @@ function eligibleSizeOptions(find) {
 
 function matchingSizeOptions(find) {
   const filter = choiceValue("size");
-  return eligibleSizeOptions(find).filter((option) => sizeMatches(option.size, filter, find));
+  return eligibleSizeOptions(find).filter((option) => {
+    if (isWomenModeActive() && !isShoeFind(find) && !isAdultClothingSize(option.size)) return false;
+    return sizeMatches(option.size, filter, find);
+  });
 }
 
 function matchingSizes(find) {
@@ -819,7 +1133,7 @@ function toggleSourcePanel() {
 function renderSingleChoiceList(name) {
   const filter = singleChoiceFilters[name];
   filter.list.innerHTML = "";
-  for (const option of filter.options) {
+  for (const option of visibleChoiceOptions(name)) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = option.value === filter.value ? "sourceOption selected" : "sourceOption";
@@ -836,6 +1150,12 @@ function renderSingleChoiceList(name) {
 
 function updateSingleChoicePanels() {
   for (const [name, filter] of Object.entries(singleChoiceFilters)) {
+    if (name === "size") {
+      const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
+      if (!visibleValues.has(filter.value)) {
+        filter.value = isWomenModeActive() ? "adult-any" : "3-6";
+      }
+    }
     const isOpen = openChoiceFilter === name;
     filter.list.hidden = !isOpen;
     filter.hint.textContent = isOpen ? "Hide" : "Choose";
@@ -1081,6 +1401,7 @@ function renderSourceList(sources) {
     populateFilters(allFinds);
     render();
   }, !selectedSources.size);
+  makeQuickButton("Trusted", () => selectMatchingSources([...trustedStoreSources]));
   makeQuickButton("Usuals", () => selectMatchingSources(usualSources));
   makeQuickButton("New shops", () => {
     const newerSources = sources.filter((source) => !usualSources.includes(source) && !bigStoreSources.includes(source));
@@ -1323,12 +1644,15 @@ function applyData(data, labelPrefix = "Cached") {
   }))
     .filter((item) => item.source);
   populateFilters(allFinds);
+  const womenCount = allFinds.filter((find) => find.gender === "women" && hasAdultSizeOption(find)).length;
   const newCount = allFinds.filter((find) => find.isNew).length;
   const priceDropCount = allFinds.filter((find) => find.priceComparison?.priceDelta < -0.01).length;
+  if (!womenCount) womenOnly = false;
   const newText = newCount ? ` · ${newCount} new` : "";
   const priceDropText = priceDropCount ? ` · ${priceDropCount} price drops` : "";
   if (!newCount) newOnly = false;
   if (!priceDropCount) priceDropsOnly = false;
+  womenOnlyButton.hidden = !womenCount;
   newOnlyButton.hidden = !newCount;
   priceDropsButton.hidden = !priceDropCount;
   const sourceText = sourceLabelText(data);
@@ -1344,11 +1668,13 @@ function filteredFinds() {
   const minDiscount = Number.parseFloat(choiceValue("discount"));
   return sortFinds(allFinds.filter((find) => {
     const isShoe = isShoeFind(find);
+    if (womenOnly && find.gender !== "women") return false;
     if (newOnly && !find.isNew) return false;
     if (priceDropsOnly && !(find.priceComparison?.priceDelta < -0.01)) return false;
     if (displayedDiscountValue(find.discount) < minDiscount) return false;
     if (choiceValue("type") === "clothes" && isShoe) return false;
     if (choiceValue("type") === "shoes" && !isShoe) return false;
+    if (womenOnly && isShoe) return false;
     if (choiceValue("gender") && find.gender !== choiceValue("gender")) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;
     if (selectedSources.size && !selectedSources.has(find.source)) return false;
@@ -1362,6 +1688,7 @@ function render() {
   const finds = filteredFinds();
   renderPromoBoard();
   countEl.textContent = finds.length;
+  womenOnlyButton.classList.toggle("active", womenOnly);
   newOnlyButton.classList.toggle("active", newOnly);
   priceDropsButton.classList.toggle("active", priceDropsOnly);
   grid.innerHTML = "";
@@ -1382,22 +1709,35 @@ function render() {
     const openLink = node.querySelector(".openLink");
 
     imgLink.href = find.url;
-    img.src = find.image;
+    img.src = proxiedImageUrl(find.image);
+    img.dataset.originalSrc = find.image;
     img.alt = find.title;
     img.addEventListener("error", () => {
       card.classList.add("imageMissing");
       img.removeAttribute("src");
     }, { once: true });
+    queueCardImageProcessing(img);
     const sourceLink = node.querySelector(".source");
-    sourceLink.textContent = find.source;
+    sourceLink.textContent = find.brand;
+    sourceLink.title = `Show ${find.brand}`;
+    sourceLink.addEventListener("click", () => {
+      womenOnly = false;
+      newOnly = false;
+      priceDropsOnly = false;
+      selectedBrands = new Set([find.brand]);
+      searchInput.value = "";
+      populateFilters(allFinds);
+      updateSingleChoicePanels();
+      render();
+    });
     const sourceHref = sourceHomeUrl(find.source, find.url);
-    if (sourceHref) sourceLink.href = sourceHref;
-    else sourceLink.removeAttribute("href");
     const newBadge = node.querySelector(".newBadge");
     newBadge.hidden = !find.isNew;
     node.querySelector("h2").textContent = find.title;
-    const gender = find.gender ? find.gender[0].toUpperCase() + find.gender.slice(1) : "Neutral";
-    node.querySelector(".brand").textContent = `${find.brand} · ${find.category || "Kidswear"} · ${gender}`;
+    const storeLink = node.querySelector(".storeLink");
+    storeLink.textContent = sourceHref ? `${find.source} ↗` : find.source;
+    if (sourceHref) storeLink.href = sourceHref;
+    else storeLink.removeAttribute("href");
     const promoNote = node.querySelector(".promoNote");
     const cleanPromoNote = displayPromoNote(find.promoNote, find.source);
     promoNote.hidden = !cleanPromoNote;
@@ -1534,9 +1874,34 @@ clearSourcesButton.addEventListener("click", () => {
   render();
 });
 
+womenOnlyButton.addEventListener("click", () => {
+  womenOnly = !womenOnly;
+  if (womenOnly) {
+    newOnly = false;
+    priceDropsOnly = false;
+    selectedBrands.clear();
+    selectedSources.clear();
+    searchInput.value = "";
+    singleChoiceFilters.discount.value = "0.4";
+    singleChoiceFilters.type.value = "clothes";
+    singleChoiceFilters.size.value = "adult-any";
+    singleChoiceFilters.shoeSize.value = "none";
+    closeOpenPanels();
+    populateFilters(allFinds);
+    updateAdminControls();
+    updateSingleChoicePanels();
+  } else {
+    if (singleChoiceFilters.size.value.startsWith("adult-")) singleChoiceFilters.size.value = "3-6";
+    if (singleChoiceFilters.shoeSize.value === "none") singleChoiceFilters.shoeSize.value = "target-shoes";
+    updateSingleChoicePanels();
+  }
+  render();
+});
+
 newOnlyButton.addEventListener("click", () => {
   newOnly = !newOnly;
   if (newOnly) {
+    womenOnly = false;
     selectedBrands.clear();
     selectedSources.clear();
     searchInput.value = "";
@@ -1555,6 +1920,7 @@ newOnlyButton.addEventListener("click", () => {
 
 priceDropsButton.addEventListener("click", () => {
   priceDropsOnly = !priceDropsOnly;
+  if (priceDropsOnly) womenOnly = false;
   render();
 });
 
