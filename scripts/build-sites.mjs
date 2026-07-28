@@ -78,7 +78,7 @@ await execFileAsync("node", ["server.mjs", "--write-snapshot"], {
   cwd: root,
   env: {
     ...process.env,
-    BUILD_MIN_DISCOUNT: "0.7",
+    BUILD_MIN_DISCOUNT: "0.4",
   },
 });
 

@@ -460,6 +460,7 @@ const singleChoiceFilters = {
       { value: "", label: "All items" },
       { value: "clothes", label: "Clothes only" },
       { value: "shoes", label: "Shoes only" },
+      { value: "accessories", label: "Accessories" },
     ],
     toggle: document.querySelector("#typeToggleArea"),
     summary: document.querySelector("#typeSummary"),
@@ -920,7 +921,23 @@ function visibleChoiceOptions(name) {
 
 function isShoeFind(find) {
   const text = [find.title, find.category].join(" ").toLowerCase();
-  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|loafer|loafers|mary jane|slipper|slippers)\b/.test(text);
+  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|footie|footies|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
+}
+
+function isAccessoryFind(find) {
+  if (isShoeFind(find)) return false;
+  if (find.itemType === "accessories") return true;
+  const title = String(find.title || "").toLowerCase();
+  const category = String(find.category || "").toLowerCase();
+  const clothingText = [title, category].join(" ");
+  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
+  const broadApparelCategory = /\bapparel\s*(?:&|and)\s*accessories\b/.test(category);
+  const accessoryPattern = /\b(accessory|accessories|hairgoods|hair|bow|bows|bow tie|clip|clips|barrette|headband|scrunchie|ribbon|toy|toys|doll|dolls|activity|rattle|teether|pacifier|blanket|bag|bags|purse|backpack|pouch|nap mat|quilt|quilts|quilted|basket|baskets|stationery|stationary|pencil|notebook|sticker|stickers|poster|print|lunch|bottle|cup|tableware|plate|bib|swaddle|towel|bath|decor|ornament|costume|dress up|jewelry|jewellery|necklace|bracelet|ring|hat|hats|sun hat|swim hat|bucket hat|beanie|bonnet|mitten|mittens|crown)\b/;
+
+  if (/\bcostume\b/.test(title)) return true;
+  if (clothingPattern.test(clothingText)) return false;
+  if (broadApparelCategory && !accessoryPattern.test(title)) return false;
+  return accessoryPattern.test([title, category].join(" "));
 }
 
 function shoeSizesFromSize(size = "") {
@@ -967,6 +984,7 @@ function selectedShoeSizeMatches(size, find) {
 }
 
 function sizeMatches(size, filter, find) {
+  if (isAccessoryFind(find)) return true;
   if (isShoeFind(find)) return selectedShoeSizeMatches(size, find);
   if (!filter) return true;
   if (filter === "adult-any") return isAdultClothingSize(size);
@@ -1001,6 +1019,7 @@ function sizeMatches(size, filter, find) {
 }
 
 function sizeSortValue(size, find) {
+  if (isAccessoryFind(find)) return 998;
   if (isShoeFind(find)) {
     const shoeSize = shoeSizesFromSize(size)[0];
     if (shoeSize) return shoeSize.system === "eu" ? shoeSize.value : shoeSize.value + 100;
@@ -1039,6 +1058,7 @@ function eligibleSizeOptions(find) {
 function matchingSizeOptions(find) {
   const filter = choiceValue("size");
   return eligibleSizeOptions(find).filter((option) => {
+    if (isAccessoryFind(find)) return true;
     if (isWomenModeActive() && !isShoeFind(find) && !isAdultClothingSize(option.size)) return false;
     return sizeMatches(option.size, filter, find);
   });
@@ -1052,6 +1072,7 @@ function formatMatchingSizes(find) {
   const options = matchingSizeOptions(find);
   const discounts = new Set(options.map((option) => Math.round(option.discount * 100)));
   const sizes = options.map((option) => {
+    if (/^default title$/i.test(option.size)) return "One size";
     if (discounts.size <= 1) return option.size;
     return `${option.size} (${pct(option.discount)})`;
   });
@@ -1668,12 +1689,14 @@ function filteredFinds() {
   const minDiscount = Number.parseFloat(choiceValue("discount"));
   return sortFinds(allFinds.filter((find) => {
     const isShoe = isShoeFind(find);
+    const isAccessory = isAccessoryFind(find);
     if (womenOnly && find.gender !== "women") return false;
     if (newOnly && !find.isNew) return false;
     if (priceDropsOnly && !(find.priceComparison?.priceDelta < -0.01)) return false;
     if (displayedDiscountValue(find.discount) < minDiscount) return false;
-    if (choiceValue("type") === "clothes" && isShoe) return false;
+    if (choiceValue("type") === "clothes" && (isShoe || isAccessory)) return false;
     if (choiceValue("type") === "shoes" && !isShoe) return false;
+    if (choiceValue("type") === "accessories" && !isAccessory) return false;
     if (womenOnly && isShoe) return false;
     if (choiceValue("gender") && find.gender !== choiceValue("gender")) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;

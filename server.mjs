@@ -893,7 +893,22 @@ function inferGender(product) {
 
 function isShoeProduct(product) {
   const text = [product.title, product.product_type, ...(product.tags || [])].join(" ").toLowerCase();
-  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|loafer|loafers|mary jane|slipper|slippers)\b/.test(text);
+  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|footie|footies|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
+}
+
+function isAccessoryProduct(product) {
+  const title = String(product.title || "").toLowerCase();
+  const category = String(product.product_type || "").toLowerCase();
+  const tags = (product.tags || []).join(" ").toLowerCase();
+  const clothingText = [title, category].join(" ");
+  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
+  const broadApparelCategory = /\bapparel\s*(?:&|and)\s*accessories\b/.test(category);
+  const accessoryPattern = /\b(accessory|accessories|hairgoods|hair|bow|bows|bow tie|clip|clips|barrette|headband|scrunchie|ribbon|toy|toys|doll|dolls|activity|rattle|teether|pacifier|blanket|bag|bags|purse|backpack|pouch|nap mat|quilt|quilts|quilted|basket|baskets|stationery|stationary|pencil|notebook|sticker|stickers|poster|print|lunch|bottle|cup|tableware|plate|bib|swaddle|towel|bath|decor|ornament|costume|dress up|jewelry|jewellery|necklace|bracelet|ring|hat|hats|sun hat|swim hat|bucket hat|beanie|bonnet|mitten|mittens|crown)\b/;
+
+  if (/\bcostume\b/.test(title)) return true;
+  if (clothingPattern.test(clothingText)) return false;
+  if (broadApparelCategory && !accessoryPattern.test(title)) return false;
+  return accessoryPattern.test([title, category, tags].join(" "));
 }
 
 function isExplicitAdultProduct(product) {
@@ -938,6 +953,7 @@ function productToFind(product, store, minDiscount) {
   if (adultProduct && !allowsBoutiqueAdultWomen(brand)) return null;
 
   const shoeProduct = isShoeProduct(product);
+  const accessoryProduct = isAccessoryProduct(product);
 
   const variants = (product.variants || [])
     .map((variant) => {
@@ -963,7 +979,7 @@ function productToFind(product, store, minDiscount) {
       && variant.discount !== null
       && !isAbnormalVariantPrice(variant)
       && displayDiscount(variant.discount) >= minDiscount
-      && (shoeProduct || adultProduct || !isAdultClothingSize(variant.size))
+      && (shoeProduct || accessoryProduct || adultProduct || !isAdultClothingSize(variant.size))
     ));
 
   if (!variants.length) return null;
@@ -987,6 +1003,7 @@ function productToFind(product, store, minDiscount) {
     brand,
     title: product.title,
     category: product.product_type || "",
+    itemType: shoeProduct ? "shoes" : (accessoryProduct ? "accessories" : "clothes"),
     gender: adultProduct && allowsBoutiqueAdultWomen(brand) ? "women" : inferGender(product),
     salePrice: best.sale,
     originalPrice: best.original,
