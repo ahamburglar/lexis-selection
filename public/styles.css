@@ -1164,6 +1164,10 @@ input {
 
 .brandPill {
   width: auto;
+  max-width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   cursor: pointer;
 }
 

@@ -419,6 +419,221 @@ const stores = [
     currency: "USD",
     pages: 3,
   },
+  {
+    source: "Paducah Kids",
+    baseUrl: "https://paducahkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "State of Kid",
+    baseUrl: "https://stateofkid.com",
+    mode: "all-products",
+  },
+  {
+    source: "Pi Baby",
+    baseUrl: "https://pibaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Owen and Sage",
+    baseUrl: "https://owenandsage.com",
+    mode: "all-products",
+  },
+  {
+    source: "Hooray Shoppe",
+    baseUrl: "https://hoorayshoppe.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Blue Beret",
+    baseUrl: "https://www.theblueberet.com",
+    mode: "all-products",
+  },
+  {
+    source: "Hazel and Fawn",
+    baseUrl: "https://hazelandfawn.com",
+    mode: "all-products",
+  },
+  {
+    source: "Baby Braithwaite",
+    baseUrl: "https://babybraithwaite.com",
+    mode: "all-products",
+  },
+  {
+    source: "Lively Kid",
+    baseUrl: "https://livelykid.com",
+    mode: "all-products",
+  },
+  {
+    source: "Collins and Conley",
+    baseUrl: "https://collinsandconley.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Ridge Kids",
+    baseUrl: "https://theridgekids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Kodomo Boston",
+    baseUrl: "https://www.kodomoboston.com",
+    mode: "all-products",
+  },
+  {
+    source: "Yoya NYC",
+    baseUrl: "https://yoyanyc.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Little Things",
+    baseUrl: "https://shopthelittlethings.com",
+    mode: "ecwid-homepage",
+  },
+  {
+    source: "Black Wagon",
+    baseUrl: "https://blackwagon.com",
+    mode: "all-products",
+  },
+  {
+    source: "Tiny Hanger",
+    baseUrl: "https://www.tinyhanger.com",
+    mode: "lightspeed-homepage",
+  },
+  {
+    source: "Hopscotch Kids",
+    baseUrl: "https://hopscotchkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Red Balloon Co.",
+    baseUrl: "https://theredballoon.com",
+    mode: "all-products",
+  },
+  {
+    source: "BIEN BIEN",
+    baseUrl: "https://bienbienshop.com",
+    mode: "all-products",
+  },
+  {
+    source: "Little Alien Kids",
+    baseUrl: "https://littlealienkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Boys and the Babe",
+    baseUrl: "https://theboysandthebabe.com",
+    mode: "all-products",
+  },
+  {
+    source: "Petit Loup",
+    baseUrl: "https://petitloup.com",
+    mode: "all-products",
+  },
+  {
+    source: "Sadie & Co",
+    baseUrl: "https://shopsadieco.com",
+    mode: "all-products",
+  },
+  {
+    source: "Flying Colors Baby",
+    baseUrl: "https://www.flyingcolorsbaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Buttons Bebe",
+    baseUrl: "https://buttonsbebe.com",
+    mode: "all-products",
+  },
+  {
+    source: "Macaroni Kids",
+    baseUrl: "https://macaronikids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Childsplay Clothing",
+    baseUrl: "https://www.childsplayclothing.com",
+    mode: "all-products",
+  },
+  {
+    source: "Mini Ruby",
+    baseUrl: "https://miniruby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Blubelle Baby",
+    baseUrl: "https://blubellebaby.com",
+    mode: "all-products",
+  },
+  {
+    source: "Les Mini",
+    baseUrl: "https://shoplesmini.com",
+    mode: "all-products",
+  },
+  {
+    source: "The Little NY",
+    baseUrl: "https://thelittleny.com",
+    mode: "all-products",
+  },
+  {
+    source: "Lolini",
+    baseUrl: "https://shoplolini.com",
+    mode: "all-products",
+  },
+  {
+    source: "Rama Baby",
+    baseUrl: "https://ramababy.com",
+    mode: "all-products",
+  },
+  {
+    source: "Fritz and Gigi",
+    baseUrl: "https://www.fritzandgigi.com",
+    mode: "all-products",
+  },
+  {
+    source: "Tuesday's Child",
+    baseUrl: "https://www.tuesdayschild.com",
+    mode: "all-products",
+  },
+  {
+    source: "Flamingo Baby and Child",
+    baseUrl: "https://flamingobabyandchild.com",
+    mode: "all-products",
+  },
+  {
+    source: "Jelly Beanz Kids",
+    baseUrl: "https://www.jellybeanzkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Elegant Child NY",
+    baseUrl: "https://elegantchildny.com",
+    mode: "all-products",
+  },
+  {
+    source: "Luibelle",
+    baseUrl: "https://luibelle.com",
+    mode: "all-products",
+  },
+  {
+    source: "Ruboland",
+    baseUrl: "https://ruboland.com",
+    mode: "all-products",
+  },
+  {
+    source: "All The Little Bows",
+    baseUrl: "https://allthelittlebows.com",
+    mode: "all-products",
+  },
+  {
+    source: "Cocoleto",
+    baseUrl: "https://cocoleto.com",
+    mode: "all-products",
+  },
+  {
+    source: "English Rabbit",
+    baseUrl: "https://englishrabbit.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;
@@ -590,6 +805,23 @@ function decodeHtml(value = "") {
     .replaceAll("&nbsp;", " ")
     .replace(/<[^>]*>/g, "")
     .trim();
+}
+
+function absoluteUrl(baseUrl, href = "") {
+  if (!href) return "";
+  if (href.startsWith("//")) return `https:${href}`;
+  if (href.startsWith("http")) return href;
+  return `${baseUrl}${href.startsWith("/") ? "" : "/"}${href}`;
+}
+
+function firstSrcFromSrcset(value = "") {
+  const first = String(value).split(",")[0]?.trim().split(/\s+/)[0] || "";
+  return firstSrcFromSrcsetClean(first);
+}
+
+function firstSrcFromSrcsetClean(value = "") {
+  const clean = String(value).replaceAll("&amp;", "&").trim();
+  return clean.startsWith("//") ? `https:${clean}` : clean;
 }
 
 function cleanPromoText(value = "") {
@@ -1122,9 +1354,97 @@ async function fetchSmallableProducts(store) {
   return products;
 }
 
+function htmlProduct({ id, title, vendor = "", productType = "", url = "", image = "", price, compareAtPrice, available = true }) {
+  return {
+    id: String(id || url || title),
+    title: decodeHtml(title || ""),
+    handle: String(id || url || title),
+    vendor: decodeHtml(vendor || ""),
+    product_type: decodeHtml(productType || ""),
+    url,
+    images: image ? [{ src: image }] : [],
+    variants: [{
+      title: "One size",
+      price: String(price ?? ""),
+      compare_at_price: String(compareAtPrice ?? ""),
+      available,
+    }],
+  };
+}
+
+async function fetchEcwidHomepageProducts(store) {
+  const response = await fetch(store.baseUrl, { headers: { "user-agent": "Mozilla/5.0" } });
+  if (!response.ok) return [];
+  const html = await response.text();
+  const products = [];
+  const items = html.match(/<div id="product-[\s\S]*?(?=<div id="product-|<\/section>|<\/main>)/g) || [];
+
+  for (const item of items) {
+    if (/ins-component__outofstock|Out of stock/i.test(item)) continue;
+    const id = item.match(/id="product-([^"]+)"/)?.[1] || "";
+    const href = item.match(/<a[^>]+href="([^"]+)"/)?.[1] || "";
+    const title = item.match(/aria-label="([^"]+)"/)?.[1]
+      || item.match(/class="ins-component__title-inner"[^>]*>([\s\S]*?)<\/div>/)?.[1]
+      || "";
+    const image = item.match(/<img[^>]+src="([^"]+)"/)?.[1] || firstSrcFromSrcset(item.match(/srcset="([^"]+)"/)?.[1] || "");
+    const price = toMoney(item.match(/ins-component__price-value"[^>]*>([\s\S]*?)<\/div>/)?.[1]);
+    const compareAtPrice = toMoney(item.match(/ins-component__price-compare"[^>]*>([\s\S]*?)<\/div>/)?.[1]);
+    if (!title || price === null || compareAtPrice === null || compareAtPrice <= price) continue;
+    products.push(htmlProduct({
+      id,
+      title,
+      vendor: "",
+      productType: "",
+      url: absoluteUrl(store.baseUrl, href),
+      image: absoluteUrl(store.baseUrl, image),
+      price,
+      compareAtPrice,
+    }));
+  }
+
+  return products;
+}
+
+async function fetchLightspeedHomepageProducts(store) {
+  const response = await fetch(store.baseUrl, { headers: { "user-agent": "Mozilla/5.0" } });
+  if (!response.ok) return [];
+  const html = await response.text();
+  const products = [];
+  const items = html.match(/<div class="prod-card"[\s\S]*?(?=<div class="prod-card"|<\/li>)/g) || [];
+
+  for (const item of items) {
+    const href = item.match(/<a[^>]+class="prod-card__img-link"[^>]+href="([^"]+)"/)?.[1]
+      || item.match(/<a[^>]+href="([^"]+)"[^>]+class="product-card__title"/)?.[1]
+      || "";
+    const vendor = item.match(/prod-card__brand[^>]*>([\s\S]*?)<\/a>/)?.[1] || "";
+    const title = item.match(/class="product-card__title"[^>]*>([\s\S]*?)<\/a>/)?.[1]
+      || item.match(/aria-label="([^"]+)"/)?.[1]
+      || "";
+    const image = item.match(/<img[^>]+src="([^"]+)"/)?.[1] || firstSrcFromSrcset(item.match(/srcset="([^"]+)"/)?.[1] || "");
+    const prices = [...item.matchAll(/\$[\d,.]+/g)].map((match) => toMoney(match[0])).filter((value) => value !== null);
+    const price = prices.length ? Math.min(...prices) : null;
+    const compareAtPrice = prices.length > 1 ? Math.max(...prices) : null;
+    if (!title || price === null || compareAtPrice === null || compareAtPrice <= price) continue;
+    products.push(htmlProduct({
+      id: href || title,
+      title,
+      vendor,
+      productType: "",
+      url: absoluteUrl(store.baseUrl, href),
+      image: absoluteUrl(store.baseUrl, image),
+      price,
+      compareAtPrice,
+    }));
+  }
+
+  return products;
+}
+
 async function fetchStoreProducts(store) {
   if (store.mode === "childrensalon-sale") return fetchChildrensalonProducts(store);
   if (store.mode === "smallable-sale") return fetchSmallableProducts(store);
+  if (store.mode === "ecwid-homepage") return fetchEcwidHomepageProducts(store);
+  if (store.mode === "lightspeed-homepage") return fetchLightspeedHomepageProducts(store);
   return fetchShopifyProducts(store);
 }
 
