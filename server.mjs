@@ -515,11 +515,6 @@ const stores = [
     mode: "all-products",
   },
   {
-    source: "Little Alien Kids",
-    baseUrl: "https://littlealienkids.com",
-    mode: "all-products",
-  },
-  {
     source: "The Boys and the Babe",
     baseUrl: "https://theboysandthebabe.com",
     mode: "all-products",
@@ -1569,10 +1564,12 @@ function findsFromCache(cache, minDiscount) {
   const newFindIds = new Set(Array.isArray(cache.newFindIds) ? cache.newFindIds : []);
   const promoNotes = new Map((cache.sources || []).map((source) => [source.source, sanitizeStorePromoNote(source.source, source.promoNote || "")]));
   const staticPromoNotes = new Map(stores.map((store) => [store.source, store.promoNote || ""]));
+  const activeStoreSources = new Set(stores.map((store) => store.source));
   const priceComparisons = new Map(
     (Array.isArray(cache.priceComparisons) ? cache.priceComparisons : []).map((comparison) => [comparison.id, comparison]),
   );
   return cache.items
+    .filter(({ store }) => activeStoreSources.has(store?.source))
     .map(({ store, product }) => {
       const find = productToFind(product, store, minDiscount);
       if (find) find.isNew = newFindIds.has(find.id);
