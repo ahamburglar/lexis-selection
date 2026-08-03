@@ -629,6 +629,11 @@ const stores = [
     baseUrl: "https://englishrabbit.com",
     mode: "all-products",
   },
+  {
+    source: "ATLR Paris",
+    baseUrl: "https://atlrparis.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;
@@ -831,6 +836,11 @@ function cleanPromoText(value = "") {
     .trim()
   const promoSnippet = bestPromoSnippet(note);
   if (promoSnippet) note = promoSnippet;
+  if (/\b(?:please enter a valid code|apply code|discount code\.js|social link|assets\/|sold out|in stock|shipping dis)\b/i.test(note)) {
+    const cleanerSnippet = bestPromoSnippet(note.replace(/\b(?:please enter a valid code|apply code|promo code|discount code\.js|social link|assets\/remove|sold out|in stock|shipping dis|save\s*%\s*save\s*up\s*to\s*save)\b/gi, " "));
+    if (cleanerSnippet) note = cleanerSnippet;
+    else return "";
+  }
   const cutoffPatterns = [
     /\b(?:shop now|shop the|new baby boxes|new arrivals|navigation|popular products|all collections|shop by category|home new arrivals|same day dispatched|instagram|facebook|pause slideshow|play slideshow|newsletter signup|sign up to receive|currency|sign in|my wish lists|no reviews|regular price|sale price)\b/i,
     /\b(?:baby girl|baby boy|baby girls|baby boys|girls tees|girls clothing|boys clothing|kids \(|newborn|tween clothing|clothing baby)\b/i,
@@ -844,6 +854,7 @@ function cleanPromoText(value = "") {
   note = note
     .replace(/\b((?:free\s+(?:u\.?s\.?a?\.?\s+)?shipping|(?:summer|end of season|sample)?\s*sale|(?:up to\s+)?\d{1,2}%\s+off)[^.!?]{0,80})\s+\1\b/gi, "$1")
     .replace(/\bWHOLESALE\s+/gi, "")
+    .replace(/\s+NEW$/i, "")
     .replace(/(\b\d{1,2}%\s*off\s+sale\b).*/i, "$1")
     .replace(/(\bfree\s+(?:u\.?s\.?a?\.?\s+|us\s+)?shipping\b.*?[$£€]?\s*\d+(?:\.\d+)?\+?).*/i, "$1")
     .replace(/\*+$/g, "")
@@ -852,7 +863,7 @@ function cleanPromoText(value = "") {
     .slice(0, 110);
   if (!note || note.length < 8) return "";
   if (/[{};=]|=>|\b(function|return|var|let|const|catch|decodeURI|component|script|shopify)\b/i.test(note)) return "";
-  if (/\b(?:regular price|sale price|no reviews)\b/i.test(note)) return "";
+  if (/\b(?:regular price|sale price|no reviews|please enter a valid code|apply code|shipping dis|discount code\.js|social link|assets\/|sold out|in stock)\b/i.test(note)) return "";
   return note;
 }
 
@@ -899,6 +910,7 @@ function sanitizePromoNote(value = "") {
   const parts = value
     .split(/\s+[·•]\s+|\s+\|\s+|(?:\s{2,})/)
     .map(cleanPromoText)
+    .map((part) => part.replace(/^\s*d\s+([$£€]\s*\d+(?:\.\d+)?)\s+more\s+and\s+get\s+free\s+shipping!?/i, "Spend $1 more and get free shipping"))
     .filter(promoTextLooksUseful)
     .sort((a, b) => promoQualityScore(b) - promoQualityScore(a));
   return [...new Set(parts.map((part) => part.replace(/\s+([,.])/g, "$1")))].slice(0, 1).join(" · ");
@@ -1448,6 +1460,52 @@ function findIdsFromCache(cache, minDiscount) {
   return new Set(findsFromCache(cache, minDiscount).map((find) => find.id));
 }
 
+function identityTitle(value = "") {
+  return normalizeBrandText(value)
+    .replace(/\b(?:new|sale|final sale|as is)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findIdentityKeys({ source = "", brand = "", title = "", url = "", id = "" } = {}) {
+  const sourceKey = normalizeBrandText(source);
+  const brandKey = normalizeBrandText(brand);
+  const titleKey = identityTitle(title);
+  const urlHandle = String(url || "").split("/products/")[1]?.split(/[?#]/)[0] || "";
+  const idHandle = String(id || "").includes(":") ? String(id).slice(String(id).indexOf(":") + 1) : String(id || "");
+  const keys = [];
+
+  if (sourceKey && brandKey && titleKey.length >= 4) keys.push(`${sourceKey}|${brandKey}|${titleKey}`);
+  if (sourceKey && titleKey.length >= 8) keys.push(`${sourceKey}|title|${titleKey}`);
+  if (sourceKey && urlHandle) keys.push(`${sourceKey}|handle|${identityTitle(urlHandle)}`);
+  if (sourceKey && idHandle) keys.push(`${sourceKey}|handle|${identityTitle(idHandle)}`);
+
+  return keys.filter(Boolean);
+}
+
+function rawProductIdentityKeysFromCache(cache) {
+  if (!cacheIsUsable(cache)) return new Set();
+  const keys = new Set();
+  for (const { store, product } of cache.items || []) {
+    const source = store?.source || "";
+    const brand = detectProductBrand(product);
+    for (const key of findIdentityKeys({
+      source,
+      brand,
+      title: product?.title || "",
+      url: product?.url || "",
+      id: `${source}:${product?.handle || product?.id || ""}`,
+    })) {
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
+function hasKnownIdentity(find, knownKeys) {
+  return findIdentityKeys(find).some((key) => knownKeys.has(key));
+}
+
 function priceComparisonsFromCaches(currentCache, previousCache, minDiscount) {
   if (!cacheIsUsable(currentCache) || !cacheIsUsable(previousCache)) return [];
   const previousById = new Map(
@@ -1548,8 +1606,9 @@ function cacheFromStoreBatches(storeBatches, { at = Date.now(), previousCache = 
 
   if (previousCache) {
     const previousFindIds = findIdsFromCache(previousCache, minDiscount);
+    const previousIdentityKeys = rawProductIdentityKeysFromCache(previousCache);
     cache.newFindIds = findsFromCache(cache, minDiscount)
-      .filter((find) => !previousFindIds.has(find.id))
+      .filter((find) => !previousFindIds.has(find.id) && !hasKnownIdentity(find, previousIdentityKeys))
       .map((find) => find.id);
     cache.priceComparisons = priceComparisonsFromCaches(cache, previousCache, minDiscount);
   } else {

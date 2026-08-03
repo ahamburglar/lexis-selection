@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LexiMom's Selection</title>
+    <title>Lexi's Selection</title>
     <meta name="description" content="Curated kidswear deals from favorite boutiques." />
-    <meta property="og:title" content="LexiMom's Selection" />
+    <meta property="og:title" content="Lexi's Selection" />
     <meta property="og:description" content="Good brands, smarter prices. Built for the 70% off finds." />
     <meta property="og:image" content="/og.png?v=3" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="LexiMom's Selection" />
+    <meta name="twitter:title" content="Lexi's Selection" />
     <meta name="twitter:description" content="Good brands, smarter prices. Built for the 70% off finds." />
     <meta name="twitter:image" content="/og.png?v=3" />
     <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png?v=7" />
@@ -22,7 +22,7 @@
     <header class="topbar">
       <div class="titleBlock">
         <p class="eyebrow">Curated kidswear deals</p>
-        <h1>LexiMom's Selection</h1>
+        <h1>Lexi's Selection</h1>
         <p class="tagline">
           Good brands, smarter prices.
           <span>Built for the 70% off finds.</span>
@@ -31,11 +31,12 @@
       <div class="topbarActions">
         <div class="promoMenu">
           <button id="promoToggleButton" class="ghostButton promoToggleButton" type="button" aria-expanded="false" hidden>
-            Store promos
+            Store list
             <span id="promoCount" class="promoCount"></span>
           </button>
-          <section id="promoBoard" class="promoBoard" aria-label="Store promotions" hidden>
-            <p class="promoDisclaimer">Promos are detected from store pages when available. Trusted means LexiMom has ordered from that store. Always confirm at checkout.</p>
+          <section id="promoBoard" class="promoBoard" aria-label="Store list" hidden>
+            <p class="promoDisclaimer">Promos are detected from store pages when available. Trusted means Lexi has ordered from that store. Always confirm at checkout.</p>
+            <input id="storeListSearch" class="storeListSearch" type="search" placeholder="Search stores" autocomplete="off" />
             <div id="promoList" class="promoList"></div>
           </section>
         </div>
@@ -112,28 +113,20 @@
           <div id="typeList" class="sourceList choiceList" aria-label="Type" hidden></div>
         </div>
         <div class="filterGroup choiceFilter singleChoiceFilter">
-          <div class="filterHead"><span>Gender</span></div>
-          <button id="genderToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
-            <strong id="genderSummary" class="choiceSummary">All</strong>
-            <span id="toggleGenderButton" class="choiceHint">Choose</span>
+          <div class="filterHead"><span>Age / Fit</span></div>
+          <button id="ageFitToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="ageFitSummary" class="choiceSummary">Kids</strong>
+            <span id="toggleAgeFitButton" class="choiceHint">Choose</span>
           </button>
-          <div id="genderList" class="sourceList choiceList" aria-label="Gender" hidden></div>
+          <div id="ageFitList" class="sourceList choiceList" aria-label="Age / Fit" hidden></div>
         </div>
         <div class="filterGroup choiceFilter singleChoiceFilter">
-          <div class="filterHead"><span>Clothes size</span></div>
+          <div class="filterHead"><span>Size</span></div>
           <button id="sizeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
             <strong id="sizeSummary" class="choiceSummary">3Y-6Y</strong>
             <span id="toggleSizeButton" class="choiceHint">Choose</span>
           </button>
-          <div id="sizeList" class="sourceList choiceList" aria-label="Clothes size" hidden></div>
-        </div>
-        <div class="filterGroup choiceFilter singleChoiceFilter">
-          <div class="filterHead"><span>Shoe size</span></div>
-          <button id="shoeSizeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
-            <strong id="shoeSizeSummary" class="choiceSummary">US 7-9 / EU 23-26</strong>
-            <span id="toggleShoeSizeButton" class="choiceHint">Choose</span>
-          </button>
-          <div id="shoeSizeList" class="sourceList choiceList" aria-label="Shoe size" hidden></div>
+          <div id="sizeList" class="sourceList choiceList" aria-label="Size" hidden></div>
         </div>
         <div class="searchFilter">
           <button id="toggleSearchButton" class="iconButton" type="button" aria-label="Search products" aria-expanded="false"></button>
@@ -149,6 +142,7 @@
       <section class="status">
         <div class="statusLeft">
           <span><strong id="count">--</strong><span> matches</span></span>
+          <button id="age3To6Button" class="ghostButton statusButton" type="button">3Y–6Y</button>
           <button id="womenOnlyButton" class="ghostButton statusButton" type="button" hidden>Women only</button>
           <button id="newOnlyButton" class="ghostButton statusButton" type="button" hidden>New only</button>
           <button id="priceDropsButton" class="ghostButton statusButton" type="button" hidden>Price drops</button>
@@ -179,7 +173,7 @@
           </div>
           <h2></h2>
           <div class="storeBlock">
-            <p class="storeLine"><a class="storeLink" target="_blank" rel="noreferrer"></a></p>
+            <p class="storeLine"><button class="storeLink" type="button"></button></p>
             <p class="promoNote" hidden></p>
           </div>
           <div class="priceRow">
@@ -196,10 +190,10 @@
 
     <footer class="siteFooter">
       <p>
-        LexiMom's Selection helps you discover kidswear deals from third-party stores.
+        Lexi's Selection helps you discover kidswear deals from third-party stores.
         Prices, discounts, availability, shipping thresholds, taxes, and return policies may change and are controlled by each store.
         Please confirm all details on the store's website before purchasing.
-        LexiMom's Selection does not sell products, process payments, ship orders, or handle returns.
+        Lexi's Selection does not sell products, process payments, ship orders, or handle returns.
       </p>
     </footer>
 

@@ -18,6 +18,7 @@ const refreshButton = document.querySelector("#refreshButton");
 const stopRefreshButton = document.querySelector("#stopRefreshButton");
 const countEl = document.querySelector("#count");
 const updatedEl = document.querySelector("#updated");
+const age3To6Button = document.querySelector("#age3To6Button");
 const womenOnlyButton = document.querySelector("#womenOnlyButton");
 const newOnlyButton = document.querySelector("#newOnlyButton");
 const priceDropsButton = document.querySelector("#priceDropsButton");
@@ -33,6 +34,7 @@ const promoBoard = document.querySelector("#promoBoard");
 const promoList = document.querySelector("#promoList");
 const promoCount = document.querySelector("#promoCount");
 const promoToggleButton = document.querySelector("#promoToggleButton");
+const storeListSearch = document.querySelector("#storeListSearch");
 const backgroundRemovedImageCache = new Map();
 const imageProcessObserver = "IntersectionObserver" in window
   ? new IntersectionObserver((entries) => {
@@ -52,6 +54,7 @@ let sourcePromos = [];
 let sourceHomeUrls = new Map();
 let selectedBrands = new Set();
 let selectedSources = new Set();
+let selectedSizes = new Set();
 let brandsOpen = false;
 let sourcesOpen = false;
 let searchOpen = false;
@@ -169,6 +172,7 @@ const brandStyleCollections = [
 ];
 let brandSearchQuery = "";
 let sourceSearchQuery = "";
+let storeListSearchQuery = "";
 const usualSources = [
   "Tiptoe Boutique",
   "Pacifier Kids",
@@ -225,6 +229,7 @@ const newlyAddedSources = [
   "All The Little Bows",
   "Cocoleto",
   "English Rabbit",
+  "ATLR Paris",
 ];
 const trustedStoreSources = new Set([
   "Buttons and Bows NY",
@@ -239,6 +244,9 @@ const trustedStoreSources = new Set([
   "Stoopher",
   "Little Big Penguin",
   "Mom Loves Me",
+  "Coucou Kids",
+  "Marigold Modern",
+  "Mini Dreamers",
 ]);
 const storeHomeUrls = new Map([
   ["Tiptoe Boutique", "https://tiptoeboutique.com"],
@@ -356,7 +364,137 @@ const storeHomeUrls = new Map([
   ["All The Little Bows", "https://allthelittlebows.com"],
   ["Cocoleto", "https://cocoleto.com"],
   ["English Rabbit", "https://englishrabbit.com"],
+  ["ATLR Paris", "https://atlrparis.com"],
 ]);
+
+const storeInstagramUrls = new Map([
+  ["Tiptoe Boutique", "https://www.instagram.com/tiptoeboutique/"],
+  ["Pacifier Kids", "https://www.instagram.com/pacifierkids/"],
+  ["Ladida", "https://www.instagram.com/ladidakids/"],
+  ["South Coast Baby Co", "https://www.instagram.com/southcoastbabyco/"],
+  ["Design Life Kids", "https://www.instagram.com/designlifekids/"],
+  ["Bella Kids NY", "https://www.instagram.com/bellakidsny/"],
+  ["Boutique Little", "https://www.instagram.com/boutiquelittle/"],
+  ["Little K Co", "https://www.instagram.com/littlekcoshop/"],
+  ["Village Maternity", "https://www.instagram.com/villagematernity/"],
+  ["Tiny Apple", "https://www.instagram.com/tinyappleny/"],
+  ["The Front Shop", "https://www.instagram.com/thefrontshop/"],
+  ["Ele Ella", "https://www.instagram.com/eleella_boutique/"],
+  ["Little Red Planet", "https://www.instagram.com/thelittleredplanet_shop/"],
+  ["Little Rags and Riches", "https://www.instagram.com/littleragsandriches/"],
+  ["Hello Little Crew", "https://www.instagram.com/hellolittlecrew/"],
+  ["Millie Bo Peep", "https://www.instagram.com/shopatmillies/"],
+  ["Le Petit Kids", "https://www.instagram.com/lepetitkids/"],
+  ["Born Yesterday Kids", "https://www.instagram.com/BornYesterdayPHL/"],
+  ["Stoopher", "https://www.instagram.com/stoopher/"],
+  ["Cotton Candy Kidz", "https://www.instagram.com/shopcottoncandykidz/"],
+  ["Kid Biz", "https://www.instagram.com/kidbizkid/"],
+  ["Mini Dreamers", "https://www.instagram.com/minidreamerskids/"],
+  ["Bears Closet Boutique", "https://www.instagram.com/Bearsclosetbtq/"],
+  ["Kids Atelier", "https://www.instagram.com/kids.atelier/"],
+  ["Bdazzle", "https://www.instagram.com/shopbdazzle/"],
+  ["Little Dreamers Boutique", "https://www.instagram.com/little_dreamers.boutique/"],
+  ["Honeypie Kids", "https://www.instagram.com/honeypiekidscom/"],
+  ["Skipper Scout", "https://www.instagram.com/skipperscoutvail/"],
+  ["The Shoppe Miami", "https://www.instagram.com/theshoppemiami/"],
+  ["Oh Baby St Pete", "https://www.instagram.com/ohbaby_stpete/"],
+  ["Coucou Kids", "https://www.instagram.com/shopcoucoukids/"],
+  ["My Oh My Kids", "https://www.instagram.com/myohmy_official/"],
+  ["Jam Baby", "https://www.instagram.com/jambabyshop/"],
+  ["Tottini", "https://www.instagram.com/tottinikids/"],
+  ["Little Waves Kids", "https://www.instagram.com/littlewaveskids/"],
+  ["Wee Mondine", "https://www.instagram.com/weemondine/"],
+  ["Shan and Toad", "https://www.instagram.com/shanandtoad/"],
+  ["Milomoo Baby", "https://www.instagram.com/milomoobaby/"],
+  ["Young Timers NY", "https://www.instagram.com/youngtimersny/"],
+  ["Spilled Milk", "https://www.instagram.com/getspilledmilk/"],
+  ["Milk + Bots", "https://www.instagram.com/MILKBOTS/"],
+  ["Wrightsville Ave", "https://www.instagram.com/wrightsville.ave.boutique/"],
+  ["Maison Baby & Kids", "https://www.instagram.com/maisonbabyandkids/"],
+  ["Childrensalon", "https://www.instagram.com/childrensalon/"],
+  ["Maisonette", "https://www.instagram.com/maisonetteworld/"],
+  ["Enjoy Kids US", "https://www.instagram.com/enjoy_kids_boutique/"],
+  ["Ellou", "https://www.instagram.com/shop.ellou/"],
+  ["Little-ish", "https://www.instagram.com/littleish.ct/"],
+  ["Klade Children's Boutique", "https://www.instagram.com/kladechildren/"],
+  ["Threadfare", "https://www.instagram.com/shopthreadfare/"],
+  ["Fussy Mussy", "https://www.instagram.com/thefussymussy/"],
+  ["Alexa James Baby", "https://www.instagram.com/alexajamesbaby/"],
+  ["Marigold Modern", "https://www.instagram.com/marigoldmodern/"],
+  ["Cub Shrub", "https://www.instagram.com/cubshrub/"],
+  ["Broomtail Kids", "https://www.instagram.com/broomtail/"],
+  ["Danrie", "https://www.instagram.com/shopdanrie/"],
+  ["Smoochie Baby", "https://www.instagram.com/smoochie_baby/"],
+  ["Dreams of Cuteness", "https://www.instagram.com/dreamsofcuteness/"],
+  ["Ely's & Co", "https://www.instagram.com/elysandco/"],
+  ["Two Tulips", "https://www.instagram.com/twotulips/"],
+  ["Paducah Kids", "https://www.instagram.com/magpiespaducah/"],
+  ["State of Kid", "https://www.instagram.com/stateofkid/"],
+  ["Pi Baby", "https://www.instagram.com/pibabyboutique/"],
+  ["Owen and Sage", "https://www.instagram.com/owenandsageshop/"],
+  ["Hooray Shoppe", "https://www.instagram.com/hooraynewburgh/"],
+  ["The Blue Beret", "https://www.instagram.com/the_blue_beret_/"],
+  ["Hazel and Fawn", "https://www.instagram.com/hazel_and_fawn/"],
+  ["Baby Braithwaite", "https://www.instagram.com/babybraithwaite/"],
+  ["Lively Kid", "https://www.instagram.com/livelykids/"],
+  ["Collins and Conley", "https://www.instagram.com/collinsandconley/"],
+  ["The Ridge Kids", "https://www.instagram.com/ridgekidsboutique/"],
+  ["Kodomo Boston", "https://www.instagram.com/kodomoboston/"],
+  ["Yoya NYC", "https://www.instagram.com/yoyanyc/"],
+  ["The Little Things", "https://www.instagram.com/thelittlethingskids/"],
+  ["Black Wagon", "https://www.instagram.com/blackwagon_portland/"],
+  ["Tiny Hanger", "https://www.instagram.com/tinyhanger/"],
+  ["Hopscotch Kids", "https://www.instagram.com/hopscotchkidsbend/"],
+  ["BIEN BIEN", "https://www.instagram.com/bien_bien_shop/"],
+  ["The Boys and the Babe", "https://www.instagram.com/theboysandthebabe/"],
+  ["Petit Loup", "https://www.instagram.com/petitloupofficial/"],
+  ["Sadie & Co", "https://www.instagram.com/shopsadiesathens/"],
+  ["Flying Colors Baby", "https://www.instagram.com/shopflyingcolors/"],
+  ["Macaroni Kids", "https://www.instagram.com/macaroni_kids/"],
+  ["Childsplay Clothing", "https://www.instagram.com/ChildsPlayClothing/"],
+  ["Mini Ruby", "https://www.instagram.com/minirubycom/"],
+  ["Blubelle Baby", "https://www.instagram.com/blubellebaby/"],
+  ["Lolini", "https://www.instagram.com/shoplolini/"],
+  ["Rama Baby", "https://www.instagram.com/ramababyofficial/"],
+  ["Fritz and Gigi", "https://www.instagram.com/fritzandgigi/"],
+  ["Tuesday's Child", "https://www.instagram.com/tcboutique/"],
+  ["Flamingo Baby and Child", "https://www.instagram.com/flamingobabyny/"],
+  ["Jelly Beanz Kids", "https://www.instagram.com/jellybeanzkids/"],
+  ["Elegant Child NY", "https://www.instagram.com/elegantchild_ny/"],
+  ["Luibelle", "https://www.instagram.com/luibelle.kids/"],
+  ["Ruboland", "https://www.instagram.com/ruboland/"],
+  ["All The Little Bows", "https://www.instagram.com/allthelittlebows/"],
+  ["Cocoleto", "https://www.instagram.com/shopcocoleto/"],
+  ["English Rabbit", "https://www.instagram.com/englishrabbit/"],
+  ["ATLR Paris", "https://www.instagram.com/atlr.paris/"],
+  ["Murray & Finn", "https://www.instagram.com/murrayandfinn/"],
+  ["Buttons Bebe", "https://www.instagram.com/buttonsbebe/"],
+  ["Les Mini", "https://www.instagram.com/shoplesmini/"],
+  ["Flying Ryno", "https://www.instagram.com/shopflyingryno/"],
+  ["Little Loungers", "https://www.instagram.com/littleloungers11/"],
+  ["Hello Alyss", "https://www.instagram.com/helloalyss/"],
+  ["Faded Floral Boutique", "https://www.instagram.com/fadedfloralboutique/"],
+  ["Panda and Cub", "https://www.instagram.com/pandaandcub/"],
+  ["Sanna Baby and Child", "https://www.instagram.com/sanna_heights/"],
+  ["Smallable", "https://www.instagram.com/smallable_store/"],
+  ["The Red Balloon Co.", "https://www.instagram.com/theredballoonco/"],
+  ["Whoopi Kids", "https://www.instagram.com/whoopikids/"],
+  ["Willkie's", "https://www.instagram.com/shopwillkies/"],
+]);
+
+function createInstagramLink(sourceName) {
+  const instagramUrl = storeInstagramUrls.get(sourceName);
+  if (!instagramUrl) return null;
+  const link = document.createElement("a");
+  link.className = "instagramLink";
+  link.href = instagramUrl;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.title = `${sourceName} on Instagram`;
+  link.setAttribute("aria-label", `${sourceName} Instagram`);
+  link.innerHTML = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"4\"></rect><circle cx=\"12\" cy=\"12\" r=\"3.2\"></circle><circle cx=\"16.4\" cy=\"7.6\" r=\"1\"></circle></svg>";
+  return link;
+}
 function promoSortRank(item) {
   const note = displayPromoNote(item.promoNote || "", item.source).toLowerCase();
   if (!note) return { group: 3, value: Number.POSITIVE_INFINITY };
@@ -376,6 +514,8 @@ function promoSortRank(item) {
 }
 
 function sortPromos(a, b) {
+  const trustedDiff = Number(trustedStoreSources.has(b.source)) - Number(trustedStoreSources.has(a.source));
+  if (trustedDiff) return trustedDiff;
   const rankA = promoSortRank(a);
   const rankB = promoSortRank(b);
   return rankA.group - rankB.group
@@ -387,8 +527,15 @@ function displayPromoNote(value = "", source = "") {
   const originalNote = String(value || "");
   let note = originalNote
     .replace(/\s+/g, " ")
+    .replace(/^\s*d\s+([$£€]\s*\d+(?:\.\d+)?)\s+more\s+and\s+get\s+free\s+shipping!?/i, "Spend $1 more and get free shipping")
     .trim();
   if (!note) return "";
+  if (/\b(?:please enter a valid code|apply code|discount code\.js|social link|assets\/|sold out|in stock|shipping dis)\b/i.test(note)) {
+    note = note
+      .replace(/\b(?:please enter a valid code|apply code|promo code|discount code\.js|social link|assets\/remove|sold out|in stock|shipping dis|save\s*%\s*save\s*up\s*to\s*save)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
 
   const patterns = [
     /\bfree\s+(?:u\.?s\.?a?\.?\s+|us\s+)?shipping\b[^.!?·]{0,80}\b(?:orders?|over|above|on|with)?[^.!?·]{0,30}(?:[$£€]?\s*\d+(?:\.\d+)?\+?)/i,
@@ -406,7 +553,7 @@ function displayPromoNote(value = "", source = "") {
       break;
     }
   }
-  if (source === "South Coast Baby Co" && !matchedPattern) return "";
+  if (!matchedPattern) return "";
   if (/^\s*[$£€]?\s*\d+(?:\.\d+)?\b/.test(note) && /\b(?:regular price|sale price|no reviews)\b/i.test(originalNote)) return "";
 
   const cutoff = note.match(/\b(?:shop now|shop the|new baby boxes|new arrivals|navigation|popular products|all collections|shop by category|home new arrivals|same day dispatched|instagram|facebook|pause slideshow|play slideshow|newsletter signup|sign up to receive|currency|sign in|my wish lists|baby girl|baby boy|baby girls|baby boys|regular price|sale price|no reviews)\b/i);
@@ -414,6 +561,7 @@ function displayPromoNote(value = "", source = "") {
   note = note
     .split("·")[0]
     .replace(/\bWHOLESALE\s+/gi, "")
+    .replace(/\s+NEW$/i, "")
     .replace(/(\b\d{1,2}%\s*off\s+sale\b).*/i, "$1")
     .replace(/(\bfree\s+(?:u\.?s\.?a?\.?\s+|us\s+)?shipping\b.*?[$£€]?\s*\d+(?:\.\d+)?\+?).*/i, "$1")
     .replace(/\*+$/g, "")
@@ -553,49 +701,61 @@ const singleChoiceFilters = {
     hint: document.querySelector("#toggleTypeButton"),
     list: document.querySelector("#typeList"),
   },
-  gender: {
-    value: "",
+  ageFit: {
+    value: "kids",
     options: [
-      { value: "", label: "All" },
-      { value: "girls", label: "Girls" },
-      { value: "boys", label: "Boys" },
-      { value: "neutral", label: "Neutral" },
+      { value: "", label: "All ages" },
+      { value: "baby", label: "Baby" },
+      { value: "toddler", label: "Toddler" },
+      { value: "kids", label: "Kids" },
+      { value: "big-kids", label: "Big kids" },
+      { value: "women", label: "Women" },
+      { value: "shoes", label: "Shoes" },
+      { value: "accessories", label: "Accessories" },
     ],
-    toggle: document.querySelector("#genderToggleArea"),
-    summary: document.querySelector("#genderSummary"),
-    hint: document.querySelector("#toggleGenderButton"),
-    list: document.querySelector("#genderList"),
+    toggle: document.querySelector("#ageFitToggleArea"),
+    summary: document.querySelector("#ageFitSummary"),
+    hint: document.querySelector("#toggleAgeFitButton"),
+    list: document.querySelector("#ageFitList"),
   },
   size: {
-    value: "3-6",
+    value: "",
     options: [
-      { value: "3-6", label: "3Y-6Y" },
-      { value: "adult-any", label: "Women sizes" },
-      { value: "adult-xs-s", label: "Women XS-S" },
-      { value: "adult-m-l", label: "Women M-L" },
-      { value: "adult-xl-plus", label: "Women XL+" },
-      { value: "", label: "Any size" },
-      { value: "baby", label: "Baby / toddler" },
-      { value: "7plus", label: "7Y+" },
+      { value: "", label: "Any size", ageFits: ["", "baby", "toddler", "kids", "big-kids", "women", "shoes", "accessories"] },
+      { value: "nb", label: "NB", ageFits: ["baby"] },
+      { value: "0-3m", label: "0-3M", ageFits: ["baby"] },
+      { value: "3-6m", label: "3-6M", ageFits: ["baby"] },
+      { value: "6-12m", label: "6-12M", ageFits: ["baby"] },
+      { value: "12-18m", label: "12–18M", ageFits: ["baby"] },
+      { value: "18-24m", label: "18–24M", ageFits: ["baby"] },
+      { value: "2t", label: "2T", ageFits: ["toddler"] },
+      { value: "3t", label: "3T", ageFits: ["toddler"] },
+      { value: "4t", label: "4T", ageFits: ["toddler"] },
+      { value: "2y", label: "2Y", ageFits: ["kids"] },
+      { value: "3y", label: "3Y", ageFits: ["kids"] },
+      { value: "4y", label: "4Y", ageFits: ["kids"] },
+      { value: "5y", label: "5Y", ageFits: ["kids"] },
+      { value: "6y", label: "6Y", ageFits: ["kids"] },
+      { value: "7y", label: "7Y", ageFits: ["kids"] },
+      { value: "8y", label: "8Y", ageFits: ["kids"] },
+      { value: "9y", label: "9Y", ageFits: ["big-kids"] },
+      { value: "10y", label: "10Y", ageFits: ["big-kids"] },
+      { value: "12y", label: "12Y", ageFits: ["big-kids"] },
+      { value: "14y", label: "14Y", ageFits: ["big-kids"] },
+      { value: "16y", label: "16Y", ageFits: ["big-kids"] },
+      { value: "adult-xs-s", label: "Women XS-S", ageFits: ["women"] },
+      { value: "adult-m-l", label: "Women M-L", ageFits: ["women"] },
+      { value: "adult-xl-plus", label: "Women XL+", ageFits: ["women"] },
+      { value: "baby-shoes", label: "Baby shoes", ageFits: ["shoes"] },
+      { value: "toddler-shoes", label: "Toddler shoes", ageFits: ["shoes"] },
+      { value: "little-kid-shoes", label: "Little kid shoes", ageFits: ["shoes"] },
+      { value: "big-kid-shoes", label: "Big kid shoes", ageFits: ["shoes"] },
+      { value: "women-shoes", label: "Women shoes", ageFits: ["shoes"] },
     ],
     toggle: document.querySelector("#sizeToggleArea"),
     summary: document.querySelector("#sizeSummary"),
     hint: document.querySelector("#toggleSizeButton"),
     list: document.querySelector("#sizeList"),
-  },
-  shoeSize: {
-    value: "target-shoes",
-    options: [
-      { value: "target-shoes", label: "US 7-9 / EU 23-26" },
-      { value: "baby-toddler-shoes", label: "Baby/toddler US 4-6 / EU 20-22" },
-      { value: "big-shoes", label: "US 10+ / EU 27+" },
-      { value: "", label: "Any shoe size" },
-      { value: "none", label: "Hide shoes" },
-    ],
-    toggle: document.querySelector("#shoeSizeToggleArea"),
-    summary: document.querySelector("#shoeSizeSummary"),
-    hint: document.querySelector("#toggleShoeSizeButton"),
-    list: document.querySelector("#shoeSizeList"),
   },
 };
 let openChoiceFilter = "";
@@ -839,8 +999,7 @@ function priceComparisonText(find) {
   if (!comparison || !Number.isFinite(comparison.priceDelta)) return "";
   const delta = Math.abs(comparison.priceDelta);
   if (delta < 0.01) return "";
-  const prefix = comparison.priceDelta < 0 ? "down" : "up";
-  return `${prefix} ${money(delta, find.currency)}`;
+  return comparison.priceDelta < 0 ? "↓" : "↑";
 }
 
 function originalSortIndex(find) {
@@ -917,6 +1076,14 @@ function choiceValue(name) {
 
 function choiceLabel(name) {
   const filter = singleChoiceFilters[name];
+  if (name === "size") {
+    if (!selectedSizes.size) return "Any size";
+    const labels = visibleChoiceOptions("size")
+      .filter((option) => selectedSizes.has(option.value))
+      .map((option) => option.label);
+    if (!labels.length) return "Any size";
+    return labels.length <= 2 ? labels.join(", ") : `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+  }
   return filter.options.find((option) => option.value === filter.value)?.label || "";
 }
 
@@ -933,6 +1100,7 @@ function textFor(find) {
 function yearsFromSize(size = "") {
   const lower = size.toLowerCase().trim();
   const years = [];
+  if (isBabySize(size)) return years;
 
   for (const match of lower.matchAll(/(\d+)\s*-\s*(\d+)\s*([ym])?/g)) {
     if (match[3] === "m") continue;
@@ -954,7 +1122,37 @@ function yearsFromSize(size = "") {
 
 function isBabySize(size = "") {
   const lower = size.toLowerCase();
-  return /\b(nb|newborn|preemie)\b/.test(lower) || /\d+\s*-\s*\d+\s*m/.test(lower) || /\d+\s*m\b/.test(lower);
+  return /\b(nb|newborn|preemie)\b/.test(lower)
+    || /\d+\s*-\s*\d+\s*(?:m|mo|mos|month|months)\b/.test(lower)
+    || /\d+\s*(?:m|mo|mos|month|months)\b/.test(lower)
+    || /\b\d+\s*-\s*\d+\s*m\b/.test(lower);
+}
+
+function monthRangeFromSize(size = "") {
+  const lower = size.toLowerCase();
+  if (/\b(nb|newborn|preemie)\b/.test(lower)) return [0];
+  const values = [];
+  for (const match of lower.matchAll(/(\d+)\s*-\s*(\d+)\s*(?:m|mo|mos|month|months)\b/g)) {
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      for (let month = start; month <= end; month += 1) values.push(month);
+    }
+  }
+  for (const match of lower.matchAll(/\b(\d+)\s*(?:m|mo|mos|month|months)\b/g)) {
+    const month = Number(match[1]);
+    if (Number.isFinite(month)) values.push(month);
+  }
+  return [...new Set(values)];
+}
+
+function toddlerYearsFromSize(size = "") {
+  const lower = size.toLowerCase();
+  const years = [];
+  for (const match of lower.matchAll(/\b([2-5])\s*t\b/g)) {
+    years.push(Number(match[1]));
+  }
+  return [...new Set(years)];
 }
 
 function adultSizeNumbers(size = "") {
@@ -983,7 +1181,7 @@ function isAdultClothingSize(size = "") {
 }
 
 function isWomenModeActive() {
-  return womenOnly;
+  return womenOnly || choiceValue("ageFit") === "women";
 }
 
 function hasAdultSizeOption(find) {
@@ -993,16 +1191,30 @@ function hasAdultSizeOption(find) {
 function visibleChoiceOptions(name) {
   const filter = singleChoiceFilters[name];
   if (name !== "size") return filter.options;
-  if (isWomenModeActive()) {
-    return filter.options.filter((option) => [
-      "adult-any",
-      "adult-xs-s",
-      "adult-m-l",
-      "adult-xl-plus",
-      "",
-    ].includes(option.value));
+  const ageFit = choiceValue("ageFit");
+  return filter.options.filter((option) => {
+    if (option.value === "") return true;
+    if (option.ageFits) return option.ageFits.includes(ageFit);
+    return ageFit === "kids";
+  });
+}
+
+function defaultSizeForAgeFit(ageFit) {
+  return "";
+}
+
+function applyAgeFitDefaults(ageFit) {
+  if (ageFit === "women") {
+    singleChoiceFilters.type.value = "clothes";
+  } else if (ageFit === "shoes") {
+    singleChoiceFilters.type.value = "shoes";
+  } else if (ageFit === "accessories") {
+    singleChoiceFilters.type.value = "accessories";
+  } else if (["shoes", "accessories"].includes(singleChoiceFilters.type.value)) {
+    singleChoiceFilters.type.value = "";
   }
-  return filter.options.filter((option) => !String(option.value).startsWith("adult-"));
+  singleChoiceFilters.size.value = defaultSizeForAgeFit(ageFit);
+  selectedSizes.clear();
 }
 
 function isShoeFind(find) {
@@ -1046,34 +1258,85 @@ function shoeSizesFromSize(size = "") {
   return sizes.filter((sizeValue) => Number.isFinite(sizeValue.value));
 }
 
-function selectedShoeSizeMatches(size, find) {
+function selectedShoeSizeMatches(size, find, filter = "") {
   if (!isShoeFind(find)) return false;
-  if (String(choiceValue("size")).startsWith("adult-")) return false;
-  const filter = choiceValue("shoeSize");
-  if (!filter) return true;
-  if (filter === "none") return false;
+  if (!filter || filter === "shoe-any") return true;
   return shoeSizesFromSize(size).some(({ system, value }) => {
-    if (filter === "baby-toddler-shoes") {
-      if (system === "eu") return value >= 20 && value <= 22;
-      if (system === "us") return value >= 4 && value <= 6;
+    if (filter === "baby-shoes") {
+      if (system === "eu") return value <= 19;
+      if (system === "us") return value <= 3;
     }
-    if (filter === "target-shoes") {
-      if (system === "eu") return value >= 23 && value <= 26;
-      if (system === "us") return value >= 7 && value <= 9;
+    if (filter === "toddler-shoes") {
+      if (system === "eu") return value >= 20 && value <= 24;
+      if (system === "us") return value >= 4 && value <= 8;
     }
-    if (filter === "big-shoes") {
-      if (system === "eu") return value >= 27;
-      if (system === "us") return value >= 10;
+    if (filter === "little-kid-shoes") {
+      if (system === "eu") return value >= 25 && value <= 31;
+      if (system === "us") return value >= 9 && value <= 13;
+    }
+    if (filter === "big-kid-shoes") {
+      if (system === "eu") return value >= 32 && value <= 38;
+      if (system === "us") return value >= 1 && value <= 6;
+    }
+    if (filter === "women-shoes") {
+      if (system === "eu") return value >= 36;
+      if (system === "us") return value >= 5;
     }
     return false;
   });
 }
 
 function sizeMatches(size, filter, find) {
-  if (isAccessoryFind(find)) return true;
-  if (isShoeFind(find)) return selectedShoeSizeMatches(size, find);
-  if (!filter) return true;
-  if (filter === "adult-any") return isAdultClothingSize(size);
+  const ageFit = choiceValue("ageFit");
+  const isShoe = isShoeFind(find);
+  const isAccessory = isAccessoryFind(find);
+  const years = yearsFromSize(size);
+  const toddlerYears = toddlerYearsFromSize(size);
+  const months = monthRangeFromSize(size);
+
+  if (isAccessory) return ageFit === "accessories" || (!ageFit && !filter);
+  if (isShoe) return (ageFit === "shoes" || (!ageFit && (!filter || String(filter).includes("shoe")))) && selectedShoeSizeMatches(size, find, filter);
+
+  if (ageFit === "baby") {
+    if (!filter) return months.length > 0;
+    if (filter === "nb") return months.includes(0);
+    if (filter === "0-3m") return months.some((month) => month >= 0 && month <= 3);
+    if (filter === "3-6m") return months.some((month) => month >= 3 && month <= 6);
+    if (filter === "6-12m") return months.some((month) => month >= 6 && month <= 12);
+    if (filter === "12-18m") return months.some((month) => month >= 12 && month <= 18);
+    if (filter === "18-24m") return months.some((month) => month >= 18 && month <= 24);
+    return false;
+  }
+
+  if (ageFit === "toddler") {
+    if (!filter) return toddlerYears.length > 0;
+    const target = Number.parseInt(filter, 10);
+    return toddlerYears.includes(target);
+  }
+
+  if (ageFit === "kids") {
+    if (!filter) return years.some((year) => year >= 2 && year <= 8);
+    if (filter === "2y") return years.includes(2);
+    if (filter === "3y") return years.includes(3);
+    if (filter === "4y") return years.includes(4);
+    if (filter === "5y") return years.includes(5);
+    if (filter === "6y") return years.includes(6);
+    if (filter === "7y") return years.includes(7);
+    if (filter === "8y") return years.includes(8);
+    return false;
+  }
+
+  if (ageFit === "big-kids") {
+    if (!filter) return years.some((year) => year >= 9);
+    if (filter === "9y") return years.includes(9);
+    if (filter === "10y") return years.includes(10);
+    if (filter === "12y") return years.includes(12);
+    if (filter === "14y") return years.includes(14);
+    if (filter === "16y") return years.includes(16);
+    return false;
+  }
+
+  if (ageFit === "women" && !filter) return isAdultClothingSize(size);
   if (filter === "adult-xs-s") {
     if (!isAdultClothingSize(size)) return false;
     const lower = size.toLowerCase();
@@ -1097,10 +1360,9 @@ function sizeMatches(size, filter, find) {
     return /\b(xl|xxl|2xl|3xl|x-large)\b/.test(lower)
       || numbers.some((value) => value >= 44);
   }
-  const years = yearsFromSize(size);
+  if (ageFit === "women") return isAdultClothingSize(size);
+  if (!filter) return true;
   if (filter === "3-6") return years.some((year) => year >= 3 && year <= 6);
-  if (filter === "7plus") return years.some((year) => year >= 7);
-  if (filter === "baby") return isBabySize(size) || years.some((year) => year < 3);
   return true;
 }
 
@@ -1142,11 +1404,10 @@ function eligibleSizeOptions(find) {
 }
 
 function matchingSizeOptions(find) {
-  const filter = choiceValue("size");
+  const filters = selectedSizes.size ? [...selectedSizes] : [""];
   return eligibleSizeOptions(find).filter((option) => {
-    if (isAccessoryFind(find)) return true;
     if (isWomenModeActive() && !isShoeFind(find) && !isAdultClothingSize(option.size)) return false;
-    return sizeMatches(option.size, filter, find);
+    return filters.some((filter) => sizeMatches(option.size, filter, find));
   });
 }
 
@@ -1240,13 +1501,76 @@ function toggleSourcePanel() {
 function renderSingleChoiceList(name) {
   const filter = singleChoiceFilters[name];
   filter.list.innerHTML = "";
-  for (const option of visibleChoiceOptions(name)) {
+  if (name === "size") {
+    if (selectedSizes.size) {
+      const quickActions = document.createElement("div");
+      quickActions.className = "sourceQuickActions";
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "sourceQuickButton";
+      clearButton.textContent = `Clear (${selectedSizes.size})`;
+      clearButton.addEventListener("click", () => {
+        selectedSizes.clear();
+        updateSingleChoicePanels();
+        render();
+      });
+      quickActions.append(clearButton);
+      filter.list.append(quickActions);
+    }
+  }
+  const options = name === "size"
+    ? visibleChoiceOptions(name).filter((option) => option.value)
+    : visibleChoiceOptions(name);
+  for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = option.value === filter.value ? "sourceOption selected" : "sourceOption";
-    button.textContent = option.label;
+    const isSelected = name === "size"
+      ? selectedSizes.has(option.value)
+      : option.value === filter.value;
+    button.className = isSelected ? "sourceOption selected" : "sourceOption";
+    if (name === "size") {
+      const checkbox = document.createElement("span");
+      checkbox.className = "sourceCheck";
+      const label = document.createElement("span");
+      label.className = "sourceOptionLabel";
+      label.textContent = option.label;
+      button.append(checkbox, label);
+    } else {
+      button.textContent = option.label;
+    }
     button.addEventListener("click", () => {
+      if (name === "size") {
+        if (!option.value) {
+          selectedSizes.clear();
+        } else if (selectedSizes.has(option.value)) {
+          selectedSizes.delete(option.value);
+        } else {
+          selectedSizes.add(option.value);
+        }
+        updateSingleChoicePanels();
+        render();
+        return;
+      }
       filter.value = option.value;
+      if (name === "ageFit") {
+        womenOnly = option.value === "women";
+        applyAgeFitDefaults(option.value);
+      }
+      if (name === "type") {
+        if (option.value === "shoes") {
+          singleChoiceFilters.ageFit.value = "shoes";
+          singleChoiceFilters.size.value = defaultSizeForAgeFit("shoes");
+          selectedSizes.clear();
+        } else if (option.value === "accessories") {
+          singleChoiceFilters.ageFit.value = "accessories";
+          singleChoiceFilters.size.value = defaultSizeForAgeFit("accessories");
+          selectedSizes.clear();
+        } else if (option.value === "clothes" && ["shoes", "accessories"].includes(choiceValue("ageFit"))) {
+          singleChoiceFilters.ageFit.value = "kids";
+          singleChoiceFilters.size.value = defaultSizeForAgeFit("kids");
+          selectedSizes.clear();
+        }
+      }
       openChoiceFilter = "";
       updateSingleChoicePanels();
       render();
@@ -1259,8 +1583,9 @@ function updateSingleChoicePanels() {
   for (const [name, filter] of Object.entries(singleChoiceFilters)) {
     if (name === "size") {
       const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
+      selectedSizes = new Set([...selectedSizes].filter((value) => visibleValues.has(value)));
       if (!visibleValues.has(filter.value)) {
-        filter.value = isWomenModeActive() ? "adult-any" : "3-6";
+        filter.value = "";
       }
     }
     const isOpen = openChoiceFilter === name;
@@ -1520,7 +1845,8 @@ function renderSourceList(sources) {
     .filter((source) => !normalizedQuery || source.toLowerCase().includes(normalizedQuery))
     .sort((a, b) => {
       const selectedDiff = Number(selectedSources.has(b)) - Number(selectedSources.has(a));
-      return selectedDiff || a.localeCompare(b);
+      const trustedDiff = Number(trustedStoreSources.has(b)) - Number(trustedStoreSources.has(a));
+      return selectedDiff || trustedDiff || a.localeCompare(b);
     });
 
   const grid = document.createElement("div");
@@ -1547,7 +1873,7 @@ function renderSourceList(sources) {
       const badge = document.createElement("span");
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
-      badge.title = "LexiMom has ordered here";
+      badge.title = "Lexi has ordered here";
       label.append(document.createTextNode(" "), badge);
     }
     button.append(checkbox, label);
@@ -1577,18 +1903,31 @@ function hideProgress() {
 }
 
 function renderPromoBoard() {
-  const promos = sourcePromos
+  const basePromos = sourcePromos
     .filter((item) => !selectedSources.size || selectedSources.has(item.source))
     .sort(sortPromos);
+  const normalizedStoreQuery = storeListSearchQuery.trim().toLowerCase();
+  const promos = basePromos
+    .filter((item) => !normalizedStoreQuery || item.source.toLowerCase().includes(normalizedStoreQuery));
 
-  if (!promos.length) promosOpen = false;
-  promoToggleButton.hidden = !promos.length;
+  if (!basePromos.length) promosOpen = false;
+  promoToggleButton.hidden = !basePromos.length;
   promoToggleButton.classList.toggle("active", promosOpen);
   promoToggleButton.setAttribute("aria-expanded", String(promosOpen));
-  promoBoard.hidden = !promos.length || !promosOpen;
+  promoBoard.hidden = !basePromos.length || !promosOpen;
+  if (storeListSearch) storeListSearch.value = storeListSearchQuery;
   promoList.innerHTML = "";
-  const activePromoCount = promos.filter((item) => displayPromoNote(item.promoNote, item.source)).length;
-  promoCount.textContent = promos.length ? `${activePromoCount}/${promos.length}` : "";
+  promoCount.textContent = basePromos.length
+    ? (normalizedStoreQuery ? `${promos.length}/${basePromos.length}` : `${basePromos.length} stores`)
+    : "";
+
+  if (!promos.length) {
+    const empty = document.createElement("div");
+    empty.className = "promoEmpty";
+    empty.textContent = "No matching stores";
+    promoList.append(empty);
+    return;
+  }
 
   for (const item of promos) {
     const row = document.createElement("div");
@@ -1606,21 +1945,26 @@ function renderPromoBoard() {
       const badge = document.createElement("span");
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
-      badge.title = "LexiMom has ordered here";
+      badge.title = "Lexi has ordered here";
       source.append(document.createTextNode(" "), badge);
     }
+    const instagramLink = createInstagramLink(item.source);
+    const sourceLine = document.createElement("div");
+    sourceLine.className = "promoSourceLine";
+    sourceLine.append(source);
+    if (instagramLink) sourceLine.append(instagramLink);
 
     const note = document.createElement("span");
     note.textContent = cleanNote || "No promo found";
     if (!item.promoNote && item.promoReason) {
       const reason = document.createElement("small");
       reason.textContent = item.promoReason;
-      row.append(source, note, reason);
+      row.append(sourceLine, note, reason);
       promoList.append(row);
       continue;
     }
 
-    row.append(source, note);
+    row.append(sourceLine, note);
     promoList.append(row);
   }
 }
@@ -1751,7 +2095,13 @@ function applyData(data, labelPrefix = "Cached") {
   const womenCount = allFinds.filter((find) => find.gender === "women" && hasAdultSizeOption(find)).length;
   const newCount = allFinds.filter((find) => find.isNew).length;
   const priceDropCount = allFinds.filter((find) => find.priceComparison?.priceDelta < -0.01).length;
-  if (!womenCount) womenOnly = false;
+  if (!womenCount) {
+    womenOnly = false;
+    if (choiceValue("ageFit") === "women") {
+      singleChoiceFilters.ageFit.value = "kids";
+      applyAgeFitDefaults("kids");
+    }
+  }
   const newText = newCount ? ` · ${newCount} new` : "";
   const priceDropText = priceDropCount ? ` · ${priceDropCount} price drops` : "";
   if (!newCount) newOnly = false;
@@ -1781,7 +2131,6 @@ function filteredFinds() {
     if (choiceValue("type") === "shoes" && !isShoe) return false;
     if (choiceValue("type") === "accessories" && !isAccessory) return false;
     if (womenOnly && isShoe) return false;
-    if (choiceValue("gender") && find.gender !== choiceValue("gender")) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;
     if (selectedSources.size && !selectedSources.has(find.source)) return false;
     if (!matchingSizes(find).length) return false;
@@ -1794,7 +2143,10 @@ function render() {
   const finds = filteredFinds();
   renderPromoBoard();
   countEl.textContent = finds.length;
-  womenOnlyButton.classList.toggle("active", womenOnly);
+  age3To6Button.classList.toggle("active", choiceValue("ageFit") === "kids"
+    && selectedSizes.size === 4
+    && ["3y", "4y", "5y", "6y"].every((value) => selectedSizes.has(value)));
+  womenOnlyButton.classList.toggle("active", isWomenModeActive());
   newOnlyButton.classList.toggle("active", newOnly);
   priceDropsButton.classList.toggle("active", priceDropsOnly);
   grid.innerHTML = "";
@@ -1828,6 +2180,10 @@ function render() {
     sourceLink.title = `Show ${find.brand}`;
     sourceLink.addEventListener("click", () => {
       womenOnly = false;
+      if (choiceValue("ageFit") === "women") {
+        singleChoiceFilters.ageFit.value = "kids";
+        applyAgeFitDefaults("kids");
+      }
       newOnly = false;
       priceDropsOnly = false;
       selectedBrands = new Set([find.brand]);
@@ -1836,14 +2192,27 @@ function render() {
       updateSingleChoicePanels();
       render();
     });
-    const sourceHref = sourceHomeUrl(find.source, find.url);
     const newBadge = node.querySelector(".newBadge");
     newBadge.hidden = !find.isNew;
     node.querySelector("h2").textContent = find.title;
     const storeLink = node.querySelector(".storeLink");
-    storeLink.textContent = sourceHref ? `${find.source} ↗` : find.source;
-    if (sourceHref) storeLink.href = sourceHref;
-    else storeLink.removeAttribute("href");
+    storeLink.textContent = find.source;
+    storeLink.title = `Show ${find.source}`;
+    storeLink.addEventListener("click", () => {
+      womenOnly = false;
+      if (choiceValue("ageFit") === "women") {
+        singleChoiceFilters.ageFit.value = "kids";
+        applyAgeFitDefaults("kids");
+      }
+      newOnly = false;
+      priceDropsOnly = false;
+      selectedSources = new Set([find.source]);
+      searchInput.value = "";
+      populateFilters(allFinds);
+      updateSingleChoicePanels();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
     const promoNote = node.querySelector(".promoNote");
     const cleanPromoNote = displayPromoNote(find.promoNote, find.source);
     promoNote.hidden = !cleanPromoNote;
@@ -1980,25 +2349,42 @@ clearSourcesButton.addEventListener("click", () => {
   render();
 });
 
+age3To6Button.addEventListener("click", () => {
+  const active = choiceValue("ageFit") === "kids"
+    && selectedSizes.size === 4
+    && ["3y", "4y", "5y", "6y"].every((value) => selectedSizes.has(value));
+  womenOnly = false;
+  newOnly = false;
+  priceDropsOnly = false;
+  singleChoiceFilters.type.value = "";
+  singleChoiceFilters.ageFit.value = "kids";
+  selectedSizes = active ? new Set() : new Set(["3y", "4y", "5y", "6y"]);
+  closeOpenPanels();
+  populateFilters(allFinds);
+  updateAdminControls();
+  updateSingleChoicePanels();
+  render();
+});
+
 womenOnlyButton.addEventListener("click", () => {
-  womenOnly = !womenOnly;
-  if (womenOnly) {
+  const nextWomenOnly = choiceValue("ageFit") !== "women";
+  womenOnly = nextWomenOnly;
+  if (nextWomenOnly) {
     newOnly = false;
     priceDropsOnly = false;
     selectedBrands.clear();
     selectedSources.clear();
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
-    singleChoiceFilters.type.value = "clothes";
-    singleChoiceFilters.size.value = "adult-any";
-    singleChoiceFilters.shoeSize.value = "none";
+    singleChoiceFilters.ageFit.value = "women";
+    applyAgeFitDefaults("women");
     closeOpenPanels();
     populateFilters(allFinds);
     updateAdminControls();
     updateSingleChoicePanels();
   } else {
-    if (singleChoiceFilters.size.value.startsWith("adult-")) singleChoiceFilters.size.value = "3-6";
-    if (singleChoiceFilters.shoeSize.value === "none") singleChoiceFilters.shoeSize.value = "target-shoes";
+    singleChoiceFilters.ageFit.value = "kids";
+    applyAgeFitDefaults("kids");
     updateSingleChoicePanels();
   }
   render();
@@ -2013,9 +2399,9 @@ newOnlyButton.addEventListener("click", () => {
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.type.value = "";
-    singleChoiceFilters.gender.value = "";
+    singleChoiceFilters.ageFit.value = "";
     singleChoiceFilters.size.value = "";
-    singleChoiceFilters.shoeSize.value = "";
+    selectedSizes.clear();
     closeOpenPanels();
     populateFilters(allFinds);
     updateAdminControls();
@@ -2026,7 +2412,14 @@ newOnlyButton.addEventListener("click", () => {
 
 priceDropsButton.addEventListener("click", () => {
   priceDropsOnly = !priceDropsOnly;
-  if (priceDropsOnly) womenOnly = false;
+  if (priceDropsOnly) {
+    womenOnly = false;
+    if (choiceValue("ageFit") === "women") {
+      singleChoiceFilters.ageFit.value = "kids";
+      applyAgeFitDefaults("kids");
+      updateSingleChoicePanels();
+    }
+  }
   render();
 });
 
@@ -2073,6 +2466,10 @@ for (const input of [searchInput]) {
   input.addEventListener("input", render);
   input.addEventListener("change", render);
 }
+storeListSearch?.addEventListener("input", () => {
+  storeListSearchQuery = storeListSearch.value;
+  renderPromoBoard();
+});
 searchInput.addEventListener("input", updateSearchPanel);
 adminUnlockButton.addEventListener("click", unlockAdminRefresh);
 refreshButton.addEventListener("click", () => loadFinds(true));
@@ -2080,6 +2477,7 @@ stopRefreshButton.addEventListener("click", stopRefresh);
 promoToggleButton.addEventListener("click", () => {
   promosOpen = !promosOpen;
   renderPromoBoard();
+  if (promosOpen) window.setTimeout(() => storeListSearch?.focus(), 0);
 });
 reportToggleButton?.addEventListener("click", () => {
   reportOpen = !reportOpen;

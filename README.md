@@ -1,4 +1,4 @@
-# LexiMom's Selection
+# Lexi's Selection
 
 A local kidswear deal finder for tracking good brands at better prices.
 
