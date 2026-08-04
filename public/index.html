@@ -57,6 +57,20 @@
             <div id="reportDetails" class="reportDetails" hidden></div>
           </section>
         </div>
+        <div class="reportMenu">
+          <button id="clickReportToggleButton" class="ghostButton reportToggleButton" type="button" aria-expanded="false" hidden>Click report</button>
+          <section id="clickReport" class="refreshReport clickReport" aria-label="Click report" hidden>
+            <div class="refreshReportHeader">
+              <div>
+                <p class="reportEyebrow">Click report</p>
+                <h2>Visitor clicks</h2>
+              </div>
+              <button id="clickReportRefreshButton" class="ghostButton" type="button">Refresh</button>
+            </div>
+            <div id="clickReportStats" class="reportStats"></div>
+            <div id="clickReportDetails" class="reportDetails"></div>
+          </section>
+        </div>
       </div>
     </header>
 
@@ -119,6 +133,14 @@
             <span id="toggleAgeFitButton" class="choiceHint">Choose</span>
           </button>
           <div id="ageFitList" class="sourceList choiceList" aria-label="Age / Fit" hidden></div>
+        </div>
+        <div class="filterGroup choiceFilter singleChoiceFilter">
+          <div class="filterHead"><span>Gender</span></div>
+          <button id="genderToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
+            <strong id="genderSummary" class="choiceSummary">All</strong>
+            <span id="toggleGenderButton" class="choiceHint">Choose</span>
+          </button>
+          <div id="genderList" class="sourceList choiceList" aria-label="Gender" hidden></div>
         </div>
         <div class="filterGroup choiceFilter singleChoiceFilter">
           <div class="filterHead"><span>Size</span></div>

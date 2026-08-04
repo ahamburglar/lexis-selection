@@ -258,6 +258,100 @@
     "type": "shoes"
   },
   {
+    "name": "Naturino",
+    "matches": [
+      "naturino"
+    ],
+    "collections": [
+      "naturino"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Falcotto",
+    "matches": [
+      "falcotto"
+    ],
+    "collections": [
+      "falcotto"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Pom d'Api",
+    "matches": [
+      "pom d'api",
+      "pom d api",
+      "pom d’api",
+      "pomdapi"
+    ],
+    "collections": [
+      "pom-dapi",
+      "pom-d-api"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Cienta",
+    "matches": [
+      "cienta"
+    ],
+    "collections": [
+      "cienta"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Igor",
+    "matches": [
+      "igor",
+      "igor shoes"
+    ],
+    "collections": [
+      "igor",
+      "igor-shoes"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Veja Kids",
+    "matches": [
+      "veja",
+      "veja kids"
+    ],
+    "collections": [
+      "veja",
+      "veja-kids"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Salt Water Sandals",
+    "matches": [
+      "salt water",
+      "salt-water",
+      "salt water sandals"
+    ],
+    "collections": [
+      "salt-water",
+      "salt-water-sandals"
+    ],
+    "type": "shoes"
+  },
+  {
+    "name": "Tip Toey Joey",
+    "matches": [
+      "tip toey joey",
+      "tip-toey-joey",
+      "tiptoey joey"
+    ],
+    "collections": [
+      "tip-toey-joey",
+      "tiptoey-joey"
+    ],
+    "type": "shoes"
+  },
+  {
     "name": "1+ In The Family",
     "matches": ["1+ in the family", "1+inthefamily", "one more in the family"],
     "collections": ["1-in-the-family", "1inthefamily"],

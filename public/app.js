@@ -30,6 +30,11 @@ const reportStats = document.querySelector("#reportStats");
 const reportDetails = document.querySelector("#reportDetails");
 const reportToggleButton = document.querySelector("#reportToggleButton");
 const reportDetailsButton = document.querySelector("#reportDetailsButton");
+const clickReport = document.querySelector("#clickReport");
+const clickReportToggleButton = document.querySelector("#clickReportToggleButton");
+const clickReportRefreshButton = document.querySelector("#clickReportRefreshButton");
+const clickReportStats = document.querySelector("#clickReportStats");
+const clickReportDetails = document.querySelector("#clickReportDetails");
 const promoBoard = document.querySelector("#promoBoard");
 const promoList = document.querySelector("#promoList");
 const promoCount = document.querySelector("#promoCount");
@@ -60,7 +65,9 @@ let sourcesOpen = false;
 let searchOpen = false;
 let promosOpen = false;
 let reportOpen = false;
+let clickReportOpen = false;
 let reportDetailsOpen = false;
+let latestClickReportData = null;
 let latestReportData = null;
 let womenOnly = false;
 let newOnly = false;
@@ -584,6 +591,57 @@ function adminRefreshToken() {
   return window.sessionStorage.getItem(adminRefreshTokenKey) || "";
 }
 
+function activeFilterSnapshot() {
+  return {
+    brands: [...selectedBrands],
+    sources: [...selectedSources],
+    sort: choiceValue("sort"),
+    discount: choiceValue("discount"),
+    type: choiceValue("type"),
+    ageFit: choiceValue("ageFit"),
+    gender: choiceValue("gender"),
+    sizes: [...selectedSizes],
+    womenOnly,
+    newOnly,
+    priceDropsOnly,
+    search: searchInput.value.trim(),
+  };
+}
+
+function clickPayload(eventType, find = null, extra = {}) {
+  return {
+    eventType,
+    source: extra.source || find?.source || "",
+    brand: extra.brand || find?.brand || "",
+    title: extra.title || find?.title || "",
+    productUrl: extra.url || find?.url || "",
+    salePrice: Number.isFinite(Number(find?.salePrice)) ? Number(find.salePrice) : null,
+    discount: Number.isFinite(Number(find?.discount)) ? Number(find.discount) : null,
+    filters: activeFilterSnapshot(),
+    pageUrl: window.location.href,
+    ...extra,
+  };
+}
+
+function trackClick(eventType, find = null, extra = {}) {
+  const payload = JSON.stringify(clickPayload(eventType, find, extra));
+  const url = "/api/clicks";
+  try {
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      if (navigator.sendBeacon(url, blob)) return;
+    }
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // Click tracking should never block shopping.
+  }
+}
+
 function cloneDataSnapshot(data) {
   if (!data) return null;
   return JSON.parse(JSON.stringify(data));
@@ -622,14 +680,21 @@ function updateAdminControls() {
     return;
   }
   reportToggleButton.hidden = !unlocked || !latestReportData;
+  if (clickReportToggleButton) clickReportToggleButton.hidden = !unlocked;
   if (!unlocked) {
     reportOpen = false;
+    clickReportOpen = false;
     refreshReport.hidden = true;
+    if (clickReport) clickReport.hidden = true;
   }
   adminUnlockButton.textContent = unlocked ? "Admin unlocked" : "Admin unlock";
   adminUnlockButton.classList.toggle("active", unlocked);
   reportToggleButton.classList.toggle("active", reportOpen);
   reportToggleButton.setAttribute("aria-expanded", String(reportOpen));
+  if (clickReportToggleButton) {
+    clickReportToggleButton.classList.toggle("active", clickReportOpen);
+    clickReportToggleButton.setAttribute("aria-expanded", String(clickReportOpen));
+  }
 }
 
 function unlockAdminRefresh() {
@@ -650,6 +715,7 @@ function unlockAdminRefresh() {
 function lockAdminRefresh() {
   window.sessionStorage.removeItem(adminRefreshTokenKey);
   reportOpen = false;
+  clickReportOpen = false;
   updateAdminControls();
 }
 
@@ -717,6 +783,19 @@ const singleChoiceFilters = {
     summary: document.querySelector("#ageFitSummary"),
     hint: document.querySelector("#toggleAgeFitButton"),
     list: document.querySelector("#ageFitList"),
+  },
+  gender: {
+    value: "",
+    options: [
+      { value: "", label: "All" },
+      { value: "girls", label: "Girls" },
+      { value: "boys", label: "Boys" },
+      { value: "neutral", label: "Neutral" },
+    ],
+    toggle: document.querySelector("#genderToggleArea"),
+    summary: document.querySelector("#genderSummary"),
+    hint: document.querySelector("#toggleGenderButton"),
+    list: document.querySelector("#genderList"),
   },
   size: {
     value: "",
@@ -1190,6 +1269,9 @@ function hasAdultSizeOption(find) {
 
 function visibleChoiceOptions(name) {
   const filter = singleChoiceFilters[name];
+  if (name === "gender" && choiceValue("ageFit") === "women") {
+    return filter.options.filter((option) => option.value === "");
+  }
   if (name !== "size") return filter.options;
   const ageFit = choiceValue("ageFit");
   return filter.options.filter((option) => {
@@ -1206,6 +1288,7 @@ function defaultSizeForAgeFit(ageFit) {
 function applyAgeFitDefaults(ageFit) {
   if (ageFit === "women") {
     singleChoiceFilters.type.value = "clothes";
+    singleChoiceFilters.gender.value = "";
   } else if (ageFit === "shoes") {
     singleChoiceFilters.type.value = "shoes";
   } else if (ageFit === "accessories") {
@@ -1540,6 +1623,10 @@ function renderSingleChoiceList(name) {
     }
     button.addEventListener("click", () => {
       if (name === "size") {
+        trackClick("size_filter_click", null, {
+          title: option.label,
+          size: option.value,
+        });
         if (!option.value) {
           selectedSizes.clear();
         } else if (selectedSizes.has(option.value)) {
@@ -1552,6 +1639,10 @@ function renderSingleChoiceList(name) {
         return;
       }
       filter.value = option.value;
+      trackClick(`${name}_filter_click`, null, {
+        title: option.label,
+        [name]: option.value,
+      });
       if (name === "ageFit") {
         womenOnly = option.value === "women";
         applyAgeFitDefaults(option.value);
@@ -1581,12 +1672,12 @@ function renderSingleChoiceList(name) {
 
 function updateSingleChoicePanels() {
   for (const [name, filter] of Object.entries(singleChoiceFilters)) {
+    const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
     if (name === "size") {
-      const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
       selectedSizes = new Set([...selectedSizes].filter((value) => visibleValues.has(value)));
-      if (!visibleValues.has(filter.value)) {
-        filter.value = "";
-      }
+    }
+    if (!visibleValues.has(filter.value)) {
+      filter.value = "";
     }
     const isOpen = openChoiceFilter === name;
     filter.list.hidden = !isOpen;
@@ -1635,6 +1726,10 @@ function closeOpenPanels() {
   }
   if (reportOpen) {
     reportOpen = false;
+    changed = true;
+  }
+  if (clickReportOpen) {
+    clickReportOpen = false;
     changed = true;
   }
   if (openChoiceFilter) {
@@ -1696,6 +1791,10 @@ function renderBrandDirectory(brands) {
       count.textContent = String(collection.brands.length);
       button.append(document.createTextNode(" "), count);
       button.addEventListener("click", () => {
+        trackClick("brand_collection_filter_click", null, {
+          title: collection.label,
+          brand: collection.brands.join(", "),
+        });
         selectedBrands = new Set(collection.brands);
         populateFilters(allFinds);
         render();
@@ -1715,6 +1814,7 @@ function renderBrandDirectory(brands) {
   allButton.textContent = "ALL";
   allButton.className = selectedBrands.size ? "" : "active";
   allButton.addEventListener("click", () => {
+    trackClick("brand_filter_clear_click");
     selectedBrands.clear();
     populateFilters(allFinds);
     render();
@@ -1770,6 +1870,7 @@ function renderBrandDirectory(brands) {
       tag.textContent = brandTypes.get(brand) || "clothes";
       button.append(name, tag);
       button.addEventListener("click", () => {
+        trackClick("brand_filter_click", null, { brand });
         if (selectedBrands.has(brand)) selectedBrands.delete(brand);
         else selectedBrands.add(brand);
         populateFilters(allFinds);
@@ -1878,6 +1979,7 @@ function renderSourceList(sources) {
     }
     button.append(checkbox, label);
     button.addEventListener("click", () => {
+      trackClick("source_filter_click", null, { source });
       if (selectedSources.has(source)) selectedSources.delete(source);
       else selectedSources.add(source);
       populateFilters(allFinds);
@@ -1939,6 +2041,12 @@ function renderPromoBoard() {
       source.href = item.baseUrl;
       source.target = "_blank";
       source.rel = "noreferrer";
+      source.addEventListener("click", () => {
+        trackClick("store_list_website_click", null, {
+          source: item.source,
+          url: item.baseUrl,
+        });
+      });
     }
     source.textContent = item.baseUrl ? `${item.source} ↗` : item.source;
     if (trustedStoreSources.has(item.source)) {
@@ -1949,6 +2057,14 @@ function renderPromoBoard() {
       source.append(document.createTextNode(" "), badge);
     }
     const instagramLink = createInstagramLink(item.source);
+    if (instagramLink) {
+      instagramLink.addEventListener("click", () => {
+        trackClick("store_list_instagram_click", null, {
+          source: item.source,
+          url: instagramLink.href,
+        });
+      });
+    }
     const sourceLine = document.createElement("div");
     sourceLine.className = "promoSourceLine";
     sourceLine.append(source);
@@ -2061,6 +2177,112 @@ function renderRefreshReport(data) {
   addGroup("Stores with no promo detected", noPromoStores);
 }
 
+function renderClickReport(data = latestClickReportData) {
+  latestClickReportData = data;
+  if (!clickReport || !clickReportToggleButton || !clickReportStats || !clickReportDetails) return;
+  const unlocked = Boolean(adminRefreshToken());
+  clickReportToggleButton.hidden = !unlocked;
+  clickReportToggleButton.classList.toggle("active", clickReportOpen);
+  clickReportToggleButton.setAttribute("aria-expanded", String(clickReportOpen));
+  clickReport.hidden = !unlocked || !clickReportOpen;
+  if (!unlocked || !clickReportOpen) return;
+
+  clickReportStats.innerHTML = "";
+  clickReportDetails.innerHTML = "";
+  const stats = [
+    ["Today", String(data?.today || 0)],
+    ["7 days", String(data?.last7Days || 0)],
+    ["All", String(data?.total || 0)],
+  ];
+  for (const [label, value] of stats) {
+    const stat = document.createElement("div");
+    stat.className = "reportStat";
+    const strong = document.createElement("strong");
+    strong.textContent = value;
+    const span = document.createElement("span");
+    span.textContent = label;
+    stat.append(strong, span);
+    clickReportStats.append(stat);
+  }
+
+  const addTopGroup = (title, items = [], valueKey = "count") => {
+    const group = document.createElement("div");
+    group.className = "reportGroup";
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const list = document.createElement("div");
+    list.className = "reportList";
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "reportItem";
+      empty.textContent = "No clicks yet";
+      list.append(empty);
+    }
+    for (const item of items.slice(0, 8)) {
+      const row = document.createElement("div");
+      row.className = "reportItem";
+      const name = document.createElement("strong");
+      name.textContent = item.label || item.title || item.source || item.brand || "Unknown";
+      const count = document.createElement("span");
+      count.textContent = `${item[valueKey] || 0} click${item[valueKey] === 1 ? "" : "s"}`;
+      row.append(name, count);
+      list.append(row);
+    }
+    group.append(heading, list);
+    clickReportDetails.append(group);
+  };
+
+  addTopGroup("Top stores", data?.topStores || []);
+  addTopGroup("Top brands", data?.topBrands || []);
+  addTopGroup("Top products", data?.topProducts || []);
+
+  const recentGroup = document.createElement("div");
+  recentGroup.className = "reportGroup";
+  const recentHeading = document.createElement("h3");
+  recentHeading.textContent = "Recent clicks";
+  const recentList = document.createElement("div");
+  recentList.className = "reportList";
+  const recent = data?.recent || [];
+  if (!recent.length) {
+    const empty = document.createElement("div");
+    empty.className = "reportItem";
+    empty.textContent = "No clicks yet";
+    recentList.append(empty);
+  }
+  for (const item of recent.slice(0, 12)) {
+    const row = document.createElement("div");
+    row.className = "reportItem";
+    const title = document.createElement("strong");
+    title.textContent = item.title || item.source || item.brand || item.eventType || "Click";
+    const detail = document.createElement("span");
+    const time = item.createdAt ? new Date(item.createdAt).toLocaleString() : "";
+    detail.textContent = [item.eventType, item.source, item.brand, time].filter(Boolean).join(" · ");
+    row.append(title, detail);
+    recentList.append(row);
+  }
+  recentGroup.append(recentHeading, recentList);
+  clickReportDetails.append(recentGroup);
+}
+
+async function loadClickReport() {
+  if (!adminRefreshToken() && !unlockAdminRefresh()) return;
+  if (!clickReportStats || !clickReportDetails) return;
+  clickReportStats.innerHTML = "";
+  clickReportDetails.innerHTML = "<div class=\"reportItem\">Loading clicks...</div>";
+  try {
+    const response = await fetch(`/api/click-report?_=${Date.now()}`, {
+      headers: { "x-admin-refresh-token": adminRefreshToken() },
+    });
+    if (response.status === 401) throw new Error("Admin unlock required.");
+    if (!response.ok) throw new Error("Could not load click report");
+    latestClickReportData = await response.json();
+    renderClickReport(latestClickReportData);
+  } catch (error) {
+    if (/admin unlock|required|unauthorized/i.test(error.message)) lockAdminRefresh();
+    if (clickReportDetails) clickReportDetails.innerHTML = `<div class="reportItem">${error.message}</div>`;
+  }
+}
+
 function applyData(data, labelPrefix = "Cached") {
   allFinds = (data.finds || [])
     .filter((find) => !hasAbnormalPrice(find))
@@ -2130,6 +2352,7 @@ function filteredFinds() {
     if (choiceValue("type") === "clothes" && (isShoe || isAccessory)) return false;
     if (choiceValue("type") === "shoes" && !isShoe) return false;
     if (choiceValue("type") === "accessories" && !isAccessory) return false;
+    if (choiceValue("gender") && find.gender !== choiceValue("gender")) return false;
     if (womenOnly && isShoe) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;
     if (selectedSources.size && !selectedSources.has(find.source)) return false;
@@ -2167,6 +2390,9 @@ function render() {
     const openLink = node.querySelector(".openLink");
 
     imgLink.href = find.url;
+    imgLink.addEventListener("click", () => {
+      trackClick("product_image_click", find);
+    });
     img.src = find.image;
     img.dataset.originalSrc = find.image;
     img.alt = find.title;
@@ -2179,6 +2405,7 @@ function render() {
     sourceLink.textContent = find.brand;
     sourceLink.title = `Show ${find.brand}`;
     sourceLink.addEventListener("click", () => {
+      trackClick("brand_chip_click", find, { brand: find.brand });
       womenOnly = false;
       if (choiceValue("ageFit") === "women") {
         singleChoiceFilters.ageFit.value = "kids";
@@ -2199,6 +2426,7 @@ function render() {
     storeLink.textContent = find.source;
     storeLink.title = `Show ${find.source}`;
     storeLink.addEventListener("click", () => {
+      trackClick("store_chip_click", find, { source: find.source });
       womenOnly = false;
       if (choiceValue("ageFit") === "women") {
         singleChoiceFilters.ageFit.value = "kids";
@@ -2229,6 +2457,9 @@ function render() {
     if (find.priceComparison?.priceDelta > 0.01) priceChange.classList.add("up");
     node.querySelector(".sizes").textContent = `Sizes: ${formatMatchingSizes(find)}`;
     openLink.href = find.url;
+    openLink.addEventListener("click", () => {
+      trackClick("product_click", find);
+    });
     card.dataset.brand = find.brand;
     card.classList.toggle("isNew", Boolean(find.isNew));
     grid.append(node);
@@ -2377,6 +2608,7 @@ womenOnlyButton.addEventListener("click", () => {
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.ageFit.value = "women";
+    singleChoiceFilters.gender.value = "";
     applyAgeFitDefaults("women");
     closeOpenPanels();
     populateFilters(allFinds);
@@ -2400,6 +2632,7 @@ newOnlyButton.addEventListener("click", () => {
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.type.value = "";
     singleChoiceFilters.ageFit.value = "";
+    singleChoiceFilters.gender.value = "";
     singleChoiceFilters.size.value = "";
     selectedSizes.clear();
     closeOpenPanels();
@@ -2481,12 +2714,25 @@ promoToggleButton.addEventListener("click", () => {
 });
 reportToggleButton?.addEventListener("click", () => {
   reportOpen = !reportOpen;
+  if (reportOpen) clickReportOpen = false;
   renderRefreshReport(latestReportData || { sources: sourcePromos, scanned: allFinds.length, finds: allFinds });
+  renderClickReport();
 });
 reportDetailsButton?.addEventListener("click", () => {
   reportDetailsOpen = !reportDetailsOpen;
   renderRefreshReport(latestReportData || { sources: sourcePromos, scanned: allFinds.length, finds: allFinds });
 });
+clickReportToggleButton?.addEventListener("click", () => {
+  clickReportOpen = !clickReportOpen;
+  if (clickReportOpen) {
+    reportOpen = false;
+    renderRefreshReport(latestReportData || { sources: sourcePromos, scanned: allFinds.length, finds: allFinds });
+    loadClickReport();
+  } else {
+    renderClickReport();
+  }
+});
+clickReportRefreshButton?.addEventListener("click", loadClickReport);
 
 for (const [name, filter] of Object.entries(singleChoiceFilters)) {
   renderSingleChoiceList(name);

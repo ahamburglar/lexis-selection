@@ -158,9 +158,126 @@ async function imageProxyResponse(url) {
   }
 }
 
+function adminAllowed(request, env) {
+  const expected = env?.ADMIN_REFRESH_TOKEN || "";
+  const provided = request.headers.get("x-admin-refresh-token") || "";
+  if (!expected) return Boolean(provided);
+  return provided === expected;
+}
+
+async function readJsonRequest(request, limit = 24000) {
+  const text = await request.text();
+  if (text.length > limit) throw new Error("Request body too large");
+  if (!text.trim()) return {};
+  return JSON.parse(text);
+}
+
+function sanitizeClickEvent(payload = {}, request = null) {
+  const filters = payload.filters && typeof payload.filters === "object" ? payload.filters : {};
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : \`\${Date.now()}-\${Math.random().toString(36).slice(2, 10)}\`,
+    createdAt: new Date().toISOString(),
+    eventType: String(payload.eventType || "click").slice(0, 80),
+    source: String(payload.source || "").slice(0, 120),
+    brand: String(payload.brand || "").slice(0, 120),
+    title: String(payload.title || "").slice(0, 240),
+    productUrl: String(payload.productUrl || payload.url || "").slice(0, 1000),
+    salePrice: Number.isFinite(Number(payload.salePrice)) ? Number(payload.salePrice) : null,
+    discount: Number.isFinite(Number(payload.discount)) ? Number(payload.discount) : null,
+    filtersJson: JSON.stringify(filters).slice(0, 4000),
+    pageUrl: String(payload.pageUrl || "").slice(0, 1000),
+    referrer: String(request?.headers?.get("referer") || "").slice(0, 1000),
+    userAgent: String(request?.headers?.get("user-agent") || "").slice(0, 500),
+  };
+}
+
+async function ensureClickSchema(env) {
+  if (!env.DB) return false;
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS click_events (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, event_type TEXT NOT NULL, source TEXT, brand TEXT, title TEXT, product_url TEXT, sale_price REAL, discount REAL, filters_json TEXT, page_url TEXT, referrer TEXT, user_agent TEXT)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS click_events_created_at_idx ON click_events (created_at)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS click_events_source_idx ON click_events (source)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS click_events_brand_idx ON click_events (brand)"),
+  ]);
+  return true;
+}
+
+async function saveClickEvent(env, event) {
+  const ready = await ensureClickSchema(env);
+  if (!ready) return false;
+  await env.DB.prepare("INSERT INTO click_events (id, created_at, event_type, source, brand, title, product_url, sale_price, discount, filters_json, page_url, referrer, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .bind(event.id, event.createdAt, event.eventType, event.source, event.brand, event.title, event.productUrl, event.salePrice, event.discount, event.filtersJson, event.pageUrl, event.referrer, event.userAgent)
+    .run();
+  return true;
+}
+
+async function clickReport(env) {
+  const ready = await ensureClickSchema(env);
+  if (!ready) return {
+    total: 0,
+    today: 0,
+    last7Days: 0,
+    topStores: [],
+    topBrands: [],
+    topProducts: [],
+    recent: [],
+    storage: "unavailable",
+  };
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [total, today, last7Days, topStores, topBrands, topProducts, recent] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) AS count FROM click_events").first(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM click_events WHERE created_at >= ?").bind(\`\${todayKey}T00:00:00.000Z\`).first(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM click_events WHERE created_at >= ?").bind(sevenDaysAgo).first(),
+    env.DB.prepare("SELECT source AS label, COUNT(*) AS count FROM click_events WHERE source IS NOT NULL AND source != '' GROUP BY source ORDER BY count DESC, source ASC LIMIT 8").all(),
+    env.DB.prepare("SELECT brand AS label, COUNT(*) AS count FROM click_events WHERE brand IS NOT NULL AND brand != '' GROUP BY brand ORDER BY count DESC, brand ASC LIMIT 8").all(),
+    env.DB.prepare("SELECT title AS label, COUNT(*) AS count FROM click_events WHERE title IS NOT NULL AND title != '' GROUP BY title ORDER BY count DESC, title ASC LIMIT 8").all(),
+    env.DB.prepare("SELECT created_at, event_type, source, brand, title FROM click_events ORDER BY created_at DESC LIMIT 20").all(),
+  ]);
+  return {
+    total: total?.count || 0,
+    today: today?.count || 0,
+    last7Days: last7Days?.count || 0,
+    topStores: topStores?.results || [],
+    topBrands: topBrands?.results || [],
+    topProducts: topProducts?.results || [],
+    recent: (recent?.results || []).map((row) => ({
+      createdAt: row.created_at,
+      eventType: row.event_type,
+      source: row.source,
+      brand: row.brand,
+      title: row.title,
+    })),
+    storage: "d1",
+  };
+}
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/clicks") {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      try {
+        const payload = await readJsonRequest(request);
+        const event = sanitizeClickEvent(payload, request);
+        const saved = await saveClickEvent(env || {}, event);
+        return saved ? new Response(null, { status: 204, headers: { "cache-control": "no-store" } }) : jsonResponse({ error: "Click storage is not configured." }, 503);
+      } catch (error) {
+        return jsonResponse({ error: error.message }, 400);
+      }
+    }
+
+    if (url.pathname === "/api/click-report") {
+      if (!adminAllowed(request, env || {})) {
+        return jsonResponse({ error: "Admin unlock required." }, 401);
+      }
+      try {
+        return jsonResponse(await clickReport(env || {}));
+      } catch (error) {
+        return jsonResponse({ error: error.message }, 500);
+      }
+    }
 
     if (url.pathname === "/api/image-proxy") {
       return imageProxyResponse(url);

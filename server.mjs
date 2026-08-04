@@ -15,6 +15,7 @@ const STORE_REFRESH_JITTER_MS = Math.max(0, Number(process.env.STORE_REFRESH_JIT
 const brandFile = path.join(__dirname, "brands.json");
 const productCacheFile = path.join(__dirname, "work", "product-cache.json");
 const productCacheTempFile = path.join(__dirname, "work", "product-cache.tmp.json");
+const clickEventsFile = path.join(__dirname, "work", "click-events.jsonl");
 const snapshotFile = path.join(__dirname, "deploy", "snapshot.json");
 const brandList = JSON.parse(await fs.readFile(brandFile, "utf8"));
 const targetBrands = new Set(brandList.map((brand) => brand.name));
@@ -2093,12 +2094,143 @@ function selectedSourcesFromUrl(url) {
   return selected.length ? new Set(selected) : null;
 }
 
+async function readJsonRequest(req, limit = 24000) {
+  let body = "";
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > limit) throw new Error("Request body too large");
+  }
+  if (!body.trim()) return {};
+  return JSON.parse(body);
+}
+
+function sanitizeClickEvent(payload = {}, req = null) {
+  const filters = payload.filters && typeof payload.filters === "object" ? payload.filters : {};
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    createdAt: new Date().toISOString(),
+    eventType: String(payload.eventType || "click").slice(0, 80),
+    source: String(payload.source || "").slice(0, 120),
+    brand: String(payload.brand || "").slice(0, 120),
+    title: String(payload.title || "").slice(0, 240),
+    productUrl: String(payload.productUrl || payload.url || "").slice(0, 1000),
+    salePrice: Number.isFinite(Number(payload.salePrice)) ? Number(payload.salePrice) : null,
+    discount: Number.isFinite(Number(payload.discount)) ? Number(payload.discount) : null,
+    filters,
+    pageUrl: String(payload.pageUrl || "").slice(0, 1000),
+    referrer: String(req?.headers?.referer || "").slice(0, 1000),
+    userAgent: String(req?.headers?.["user-agent"] || "").slice(0, 500),
+  };
+}
+
+async function saveLocalClickEvent(event) {
+  await fs.mkdir(path.dirname(clickEventsFile), { recursive: true });
+  await fs.appendFile(clickEventsFile, `${JSON.stringify(event)}\n`, "utf8");
+}
+
+async function readLocalClickEvents() {
+  try {
+    const text = await fs.readFile(clickEventsFile, "utf8");
+    return text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+function topClickItems(events, key, limit = 8) {
+  const counts = new Map();
+  for (const event of events) {
+    const label = String(event[key] || "").trim();
+    if (!label) continue;
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function clickReportFromEvents(events) {
+  const now = Date.now();
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const datedEvents = events.filter((event) => Number.isFinite(Date.parse(event.createdAt || "")));
+  return {
+    total: datedEvents.length,
+    today: datedEvents.filter((event) => String(event.createdAt || "").startsWith(todayKey)).length,
+    last7Days: datedEvents.filter((event) => Date.parse(event.createdAt) >= sevenDaysAgo).length,
+    topStores: topClickItems(datedEvents, "source"),
+    topBrands: topClickItems(datedEvents, "brand"),
+    topProducts: topClickItems(datedEvents, "title"),
+    recent: datedEvents
+      .slice()
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, 20)
+      .map((event) => ({
+        createdAt: event.createdAt,
+        eventType: event.eventType,
+        source: event.source,
+        brand: event.brand,
+        title: event.title,
+      })),
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const forceRefresh = url.searchParams.get("refresh") === "1";
   const refreshToken = req.headers["x-admin-refresh-token"] || url.searchParams.get("adminToken") || "";
   const refreshAllowed = !ADMIN_REFRESH_TOKEN || refreshToken === ADMIN_REFRESH_TOKEN;
   const selectedSources = selectedSourcesFromUrl(url);
+
+  if (url.pathname === "/api/clicks") {
+    if (req.method !== "POST") {
+      res.writeHead(405, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Method not allowed" }));
+      return;
+    }
+    try {
+      const payload = await readJsonRequest(req);
+      const event = sanitizeClickEvent(payload, req);
+      await saveLocalClickEvent(event);
+      res.writeHead(204, { "cache-control": "no-store" });
+      res.end();
+    } catch (error) {
+      res.writeHead(400, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/click-report") {
+    const clickReportAllowed = ADMIN_REFRESH_TOKEN ? refreshAllowed : Boolean(refreshToken);
+    if (!clickReportAllowed) {
+      res.writeHead(401, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ error: "Admin unlock required." }));
+      return;
+    }
+    try {
+      const events = await readLocalClickEvents();
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify(clickReportFromEvents(events)));
+    } catch (error) {
+      res.writeHead(500, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+    return;
+  }
 
   if (url.pathname === "/api/image-proxy") {
     try {

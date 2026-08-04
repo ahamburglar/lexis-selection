@@ -200,7 +200,16 @@ main {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(186px, 1.22fr) minmax(148px, 1fr) repeat(5, minmax(96px, 0.72fr)) 38px;
+  grid-template-columns:
+    minmax(180px, 1.2fr)
+    minmax(145px, 1fr)
+    minmax(104px, 0.7fr)
+    minmax(104px, 0.7fr)
+    minmax(104px, 0.7fr)
+    minmax(108px, 0.72fr)
+    minmax(88px, 0.58fr)
+    minmax(132px, 0.88fr)
+    38px;
   gap: 6px;
   align-items: start;
   margin-bottom: 18px;
