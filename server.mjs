@@ -11,6 +11,15 @@ const PORT = Number(process.env.PORT || 5173);
 const ADMIN_REFRESH_TOKEN = process.env.ADMIN_REFRESH_TOKEN || "";
 const STORE_REFRESH_CONCURRENCY = Math.max(1, Number(process.env.STORE_REFRESH_CONCURRENCY || 3) || 3);
 const STORE_REFRESH_JITTER_MS = Math.max(0, Number(process.env.STORE_REFRESH_JITTER_MS || 3000) || 3000);
+const DEFAULT_SALE_COLLECTIONS = [
+  "sale",
+  "sales",
+  "clearance",
+  "outlet",
+  "last-chance",
+  "final-sale",
+  "warehouse-sale",
+];
 
 const brandFile = path.join(__dirname, "brands.json");
 const productCacheFile = path.join(__dirname, "work", "product-cache.json");
@@ -20,6 +29,10 @@ const snapshotFile = path.join(__dirname, "deploy", "snapshot.json");
 const brandList = JSON.parse(await fs.readFile(brandFile, "utf8"));
 const targetBrands = new Set(brandList.map((brand) => brand.name));
 const brandCollections = [...new Set(brandList.flatMap((brand) => brand.collections || []))];
+const excludedBrandMatches = [
+  "rock your baby",
+  "rock-your-baby",
+].map(normalizeBrandText);
 const boutiqueAdultWomenBrands = new Set([
   "Louise Misha",
   "Emile et Ida",
@@ -200,7 +213,9 @@ const stores = [
   {
     source: "Bdazzle",
     baseUrl: "https://shopbdazzle.com",
-    mode: "all-products",
+    mode: "collections",
+    collections: ["sale"],
+    pages: 2,
   },
   {
     source: "Little Dreamers Boutique",
@@ -746,19 +761,38 @@ function normalizeBrandText(value = "") {
     .trim();
 }
 
-function detectProductBrand(product) {
-  const vendorBrand = normalizeBrand(product.vendor);
-  if (targetBrands.has(vendorBrand)) return vendorBrand;
+function productBrandSearchText(product) {
+  return normalizeBrandText([
+    product.handle,
+    product.url,
+    product.image?.src,
+    product.images?.[0]?.src,
+    product.title,
+  ].filter(Boolean).join(" "));
+}
 
-  const title = normalizeBrandText(product.title);
+function isExcludedBrandProduct(product) {
+  const productText = productBrandSearchText(product);
+  return excludedBrandMatches.some((match) => (
+    productText === match
+    || productText.startsWith(`${match} `)
+    || productText.includes(` ${match} `)
+  ));
+}
+
+function detectProductBrand(product) {
+  const productText = productBrandSearchText(product);
   const candidates = brandList
     .flatMap((brand) => (brand.matches || [brand.name]).map((match) => ({ brand: brand.name, match: normalizeBrandText(match) })))
     .filter((candidate) => candidate.match)
     .sort((a, b) => b.match.length - a.match.length);
 
   for (const { brand, match } of candidates) {
-    if (title === match || title.startsWith(`${match} `) || title.includes(` ${match} `)) return brand;
+    if (productText === match || productText.startsWith(`${match} `) || productText.includes(` ${match} `)) return brand;
   }
+
+  const vendorBrand = normalizeBrand(product.vendor);
+  if (targetBrands.has(vendorBrand)) return vendorBrand;
 
   return vendorBrand;
 }
@@ -1063,11 +1097,20 @@ async function fetchStorePromoNote(store) {
     return { promoNote: store.promoNote, promoStatus: "found", promoReason: "Manual store note." };
   }
   try {
-    const response = await fetch(store.baseUrl, { headers: { "user-agent": "Mozilla/5.0" } });
-    if (!response.ok) {
-      return { promoNote: "", promoStatus: "failed", promoReason: `Homepage returned ${response.status}.` };
+    let html = "";
+    try {
+      const response = await fetch(store.baseUrl, { headers: { "user-agent": "Mozilla/5.0" } });
+      if (!response.ok) {
+        return { promoNote: "", promoStatus: "failed", promoReason: `Homepage returned ${response.status}.` };
+      }
+      html = await response.text();
+    } catch (fetchError) {
+      const { stdout } = await execFileAsync("curl", ["-L", "-s", "--max-time", "20", "-A", "Mozilla/5.0", store.baseUrl], {
+        maxBuffer: 6 * 1024 * 1024,
+      });
+      html = stdout;
+      if (!html) throw fetchError;
     }
-    const html = await response.text();
     const promoNote = sanitizeStorePromoNote(store, [
       extractImagePromoNote(html, store),
       extractPromoNote(html),
@@ -1187,6 +1230,7 @@ function isAbnormalVariantPrice({ sale, original, discount }) {
 }
 
 function productToFind(product, store, minDiscount) {
+  if (isExcludedBrandProduct(product)) return null;
   const brand = detectProductBrand(product);
   if (!targetBrands.has(brand)) return null;
   const adultProduct = isExplicitAdultProduct(product);
@@ -1259,14 +1303,10 @@ function productToFind(product, store, minDiscount) {
   };
 }
 
-async function fetchShopifyProducts(store) {
+async function fetchShopifyProductPaths(store, productPaths, pageCount) {
   const products = [];
-  const paths = store.mode === "collections"
-    ? store.collections.map((collection) => `/collections/${collection}/products.json`)
-    : ["/products.json"];
-  const pageCount = store.pages || 20;
 
-  for (const productPath of paths) {
+  for (const productPath of productPaths) {
     for (let page = 1; page <= pageCount; page += 1) {
       const url = `${store.baseUrl}${productPath}?limit=250&page=${page}`;
       const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
@@ -1283,6 +1323,24 @@ async function fetchShopifyProducts(store) {
     }
   }
   return products;
+}
+
+async function fetchShopifyProducts(store, minDiscount = 0.4) {
+  if (store.mode === "collections") {
+    const paths = store.collections.map((collection) => `/collections/${collection}/products.json`);
+    return fetchShopifyProductPaths(store, paths, store.pages || 20);
+  }
+
+  if (store.preferSaleCollections !== false) {
+    const saleCollections = store.saleCollections || DEFAULT_SALE_COLLECTIONS;
+    const salePaths = saleCollections.map((collection) => `/collections/${collection}/products.json`);
+    const saleProducts = await fetchShopifyProductPaths(store, salePaths, store.salePages || 4);
+    if (saleProducts.some((product) => productToFind(product, store, minDiscount))) {
+      return saleProducts;
+    }
+  }
+
+  return fetchShopifyProductPaths(store, ["/products.json"], store.pages || 20);
 }
 
 async function fetchChildrensalonProducts(store) {
@@ -1328,9 +1386,16 @@ async function fetchSmallableProducts(store) {
   const pageCount = store.pages || 3;
   for (let page = 1; page <= pageCount; page += 1) {
     const url = `${store.baseUrl}/en/page/soldes-enfant-bebe-ado${page === 1 ? "" : `?page=${page}`}`;
-    const { stdout: html } = await execFileAsync("curl", ["-L", "-s", "--max-time", "20", "-A", "Mozilla/5.0", url], {
-      maxBuffer: 6 * 1024 * 1024,
-    });
+    let html = "";
+    try {
+      const result = await execFileAsync("curl", ["-L", "-s", "--max-time", "30", "-A", "Mozilla/5.0", url], {
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      html = result.stdout;
+    } catch (error) {
+      if (products.length) break;
+      throw error;
+    }
     if (!html) break;
     const items = html.match(/data-testid="ProductCard_container"[\s\S]*?(?=data-testid="ProductCard_container"|<\/main>|<\/script>)/g) || [];
     for (const item of items) {
@@ -1359,7 +1424,56 @@ async function fetchSmallableProducts(store) {
       });
     }
   }
-  return products;
+  return hydrateSmallableSizes(products);
+}
+
+function extractSmallableAvailableSizes(html = "") {
+  const options = html.match(/<li\b[^>]*id="productSize-[\s\S]*?<\/li>/g) || [];
+  return options
+    .map((option) => {
+      if (/Sold out/i.test(option)) return "";
+      const size = option.match(/ProductSizeSelector_sizeValue__[^\"]*"[^>]*>([\s\S]*?)<\/div>/)?.[1] || "";
+      return decodeHtml(size).replace(/<!--[\s\S]*?-->/g, " ").replace(/\s+/g, " ").trim();
+    })
+    .filter(Boolean);
+}
+
+async function fetchSmallableProductSizes(product) {
+  if (!product.url) return [];
+  try {
+    const { stdout: html } = await execFileAsync("curl", ["-L", "-s", "--max-time", "20", "-A", "Mozilla/5.0", product.url], {
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    return [...new Set(extractSmallableAvailableSizes(html))];
+  } catch {
+    return [];
+  }
+}
+
+async function hydrateSmallableSizes(products) {
+  const hydrated = [];
+  let nextIndex = 0;
+  const workerCount = Math.min(4, products.length || 1);
+
+  async function worker() {
+    while (nextIndex < products.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const product = products[index];
+      const sizes = await fetchSmallableProductSizes(product);
+      if (sizes.length) {
+        product.variants = sizes.map((size) => ({
+          ...product.variants[0],
+          title: size,
+          option1: size,
+        }));
+      }
+      hydrated[index] = product;
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return hydrated.filter(Boolean);
 }
 
 function htmlProduct({ id, title, vendor = "", productType = "", url = "", image = "", price, compareAtPrice, available = true }) {
@@ -1448,12 +1562,12 @@ async function fetchLightspeedHomepageProducts(store) {
   return products;
 }
 
-async function fetchStoreProducts(store) {
+async function fetchStoreProducts(store, minDiscount = 0.4) {
   if (store.mode === "childrensalon-sale") return fetchChildrensalonProducts(store);
   if (store.mode === "smallable-sale") return fetchSmallableProducts(store);
   if (store.mode === "ecwid-homepage") return fetchEcwidHomepageProducts(store);
   if (store.mode === "lightspeed-homepage") return fetchLightspeedHomepageProducts(store);
-  return fetchShopifyProducts(store);
+  return fetchShopifyProducts(store, minDiscount);
 }
 
 function findIdsFromCache(cache, minDiscount) {
@@ -1918,7 +2032,7 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
     let scanReason = "";
     try {
       const result = await Promise.allSettled([
-        fetchStoreProducts(store),
+        fetchStoreProducts(store, minDiscount),
         fetchStorePromoNote(store),
       ]);
       if (result[0].status === "fulfilled") products = result[0].value;
@@ -1926,21 +2040,16 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
       if (result[1].status === "fulfilled") promoResult = result[1].value;
       else promoResult = { promoNote: "", promoStatus: "failed", promoReason: result[1].reason?.message || "Promo scan failed." };
     } catch (fetchError) {
-      if (isDnsFetchError(fetchError)) {
-        const previous = previousStoreState(store, previousCache, fallbackSnapshot);
-        if (previous) {
-          products = previous.products;
-          promoResult = {
-            promoNote: previous.previousSource?.promoNote || "",
-            promoStatus: previous.previousSource?.promoStatus || (previous.previousSource?.promoNote ? "found" : "not_found"),
-            promoReason: previous.previousSource?.promoReason || "Kept from previous cache after DNS failed.",
-          };
-          scanStatus = "dns_failed";
-          scanReason = `DNS failed; kept previous data. ${formatFetchError(fetchError)}`;
-        } else {
-          error = fetchError;
-          console.warn(`Failed to fetch ${store.source}: ${formatFetchError(fetchError)}`);
-        }
+      const previous = previousStoreState(store, previousCache, fallbackSnapshot);
+      if (previous) {
+        products = previous.products;
+        promoResult = {
+          promoNote: previous.previousSource?.promoNote || "",
+          promoStatus: previous.previousSource?.promoStatus || (previous.previousSource?.promoNote ? "found" : "not_found"),
+          promoReason: previous.previousSource?.promoReason || "Kept from previous cache after a temporary refresh error.",
+        };
+        scanStatus = "cached";
+        scanReason = `Kept previous data after a temporary refresh error. ${formatFetchError(fetchError)}`;
       } else {
         error = fetchError;
         console.warn(`Failed to fetch ${store.source}: ${formatFetchError(fetchError)}`);

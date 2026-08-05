@@ -257,7 +257,7 @@ const trustedStoreSources = new Set([
 ]);
 const storeHomeUrls = new Map([
   ["Tiptoe Boutique", "https://tiptoeboutique.com"],
-  ["Pacifier Kids", "https://pacifierkids.com"],
+  ["Pacifier Kids", "https://prz.io/ZD0gGBPu5"],
   ["Buttons and Bows NY", "https://buttonsandbowsny.com"],
   ["Ladida", "https://www.ladida.com"],
   ["South Coast Baby Co", "https://south-coast-baby-co.myshopify.com"],

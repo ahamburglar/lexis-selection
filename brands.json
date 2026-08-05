@@ -512,5 +512,11 @@
     "matches": ["the new society"],
     "collections": ["the-new-society"],
     "type": "clothes"
+  },
+  {
+    "name": "Kuling",
+    "matches": ["kuling"],
+    "collections": ["kuling"],
+    "type": "clothes"
   }
 ]
