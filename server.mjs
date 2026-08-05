@@ -1331,13 +1331,10 @@ async function fetchShopifyProducts(store, minDiscount = 0.4) {
     return fetchShopifyProductPaths(store, paths, store.pages || 20);
   }
 
-  if (store.preferSaleCollections !== false) {
+  if (store.useSaleCollectionsOnly) {
     const saleCollections = store.saleCollections || DEFAULT_SALE_COLLECTIONS;
     const salePaths = saleCollections.map((collection) => `/collections/${collection}/products.json`);
-    const saleProducts = await fetchShopifyProductPaths(store, salePaths, store.salePages || 4);
-    if (saleProducts.some((product) => productToFind(product, store, minDiscount))) {
-      return saleProducts;
-    }
+    return fetchShopifyProductPaths(store, salePaths, store.salePages || 4);
   }
 
   return fetchShopifyProductPaths(store, ["/products.json"], store.pages || 20);
@@ -2125,8 +2122,8 @@ async function latestFinds({ force = false, minDiscount = 0.7, selectedSources =
   return snapshotFromCache(cached, minDiscount);
 }
 
-async function writeDeploySnapshot({ minDiscount = 0.7 } = {}) {
-  const snapshot = await latestFinds({ force: false, minDiscount });
+async function writeDeploySnapshot({ minDiscount = 0.7, force = false } = {}) {
+  const snapshot = await latestFinds({ force, minDiscount });
   await fs.mkdir(path.dirname(snapshotFile), { recursive: true });
   await fs.writeFile(snapshotFile, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
   return snapshot;
@@ -2434,7 +2431,8 @@ const server = http.createServer(async (req, res) => {
 if (process.argv.includes("--write-snapshot")) {
   const requestedDiscount = Number.parseFloat(process.env.BUILD_MIN_DISCOUNT || "0.7");
   const minDiscount = Number.isFinite(requestedDiscount) ? Math.min(Math.max(requestedDiscount, 0.3), 0.9) : 0.7;
-  const snapshot = await writeDeploySnapshot({ minDiscount });
+  const force = process.env.BUILD_FORCE_REFRESH === "1";
+  const snapshot = await writeDeploySnapshot({ minDiscount, force });
   console.log(`Wrote deploy snapshot with ${snapshot.sources?.length || 0} sources and ${snapshot.finds?.length || 0} finds.`);
 } else {
   server.listen(PORT, "127.0.0.1", () => {
