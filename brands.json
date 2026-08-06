@@ -518,5 +518,23 @@
     "matches": ["kuling"],
     "collections": ["kuling"],
     "type": "clothes"
+  },
+  {
+    "name": "Pepe",
+    "matches": ["pepe"],
+    "collections": ["pepe"],
+    "type": "clothes"
+  },
+  {
+    "name": "Bachaa",
+    "matches": ["bachaa"],
+    "collections": ["bachaa"],
+    "type": "clothes"
+  },
+  {
+    "name": "Bonjour",
+    "matches": ["bonjour", "bonjour diary"],
+    "collections": ["bonjour", "bonjour-diary"],
+    "type": "clothes"
   }
 ]
