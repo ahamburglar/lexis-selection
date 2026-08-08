@@ -326,15 +326,14 @@
     "type": "shoes"
   },
   {
-    "name": "Salt Water Sandals",
+    "name": "Camper",
     "matches": [
-      "salt water",
-      "salt-water",
-      "salt water sandals"
+      "camper",
+      "camper kids"
     ],
     "collections": [
-      "salt-water",
-      "salt-water-sandals"
+      "camper",
+      "camper-kids"
     ],
     "type": "shoes"
   },

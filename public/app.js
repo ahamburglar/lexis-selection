@@ -60,6 +60,7 @@ let sourceHomeUrls = new Map();
 let selectedBrands = new Set();
 let selectedSources = new Set();
 let selectedSizes = new Set();
+let selectedGenders = new Set();
 let brandsOpen = false;
 let sourcesOpen = false;
 let searchOpen = false;
@@ -599,7 +600,7 @@ function activeFilterSnapshot() {
     discount: choiceValue("discount"),
     type: choiceValue("type"),
     ageFit: choiceValue("ageFit"),
-    gender: choiceValue("gender"),
+    genders: [...selectedGenders],
     sizes: [...selectedSizes],
     womenOnly,
     newOnly,
@@ -732,6 +733,7 @@ const singleChoiceFilters = {
       { value: "alpha-desc", label: "Alphabetically, Z-A" },
       { value: "price-asc", label: "Price, low to high" },
       { value: "price-desc", label: "Price, high to low" },
+      { value: "discount-desc", label: "Discount, highest to lowest" },
       { value: "date-asc", label: "Date, old to new" },
       { value: "date-desc", label: "Date, new to old" },
     ],
@@ -1123,6 +1125,12 @@ function sortFinds(finds) {
         || compareTitles(a, b)
         || compareCurrentFeedOrder(a, b);
     }
+    if (sortValue === "discount-desc") {
+      return compareNumbers(displayedDiscountValue(b.discount), displayedDiscountValue(a.discount))
+        || compareNumbers(a.salePrice, b.salePrice)
+        || compareTitles(a, b)
+        || compareCurrentFeedOrder(a, b);
+    }
     if (sortValue === "date-asc") {
       return compareCurrentFeedOrder(b, a)
         || compareTitles(a, b)
@@ -1155,6 +1163,14 @@ function choiceValue(name) {
 
 function choiceLabel(name) {
   const filter = singleChoiceFilters[name];
+  if (name === "gender") {
+    if (!selectedGenders.size) return "All";
+    const labels = visibleChoiceOptions("gender")
+      .filter((option) => selectedGenders.has(option.value))
+      .map((option) => option.label);
+    if (!labels.length) return "All";
+    return labels.length <= 2 ? labels.join(", ") : `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+  }
   if (name === "size") {
     if (!selectedSizes.size) return "Any size";
     const labels = visibleChoiceOptions("size")
@@ -1288,7 +1304,7 @@ function defaultSizeForAgeFit(ageFit) {
 function applyAgeFitDefaults(ageFit) {
   if (ageFit === "women") {
     singleChoiceFilters.type.value = "clothes";
-    singleChoiceFilters.gender.value = "";
+    selectedGenders.clear();
   } else if (ageFit === "shoes") {
     singleChoiceFilters.type.value = "shoes";
   } else if (ageFit === "accessories") {
@@ -1584,16 +1600,17 @@ function toggleSourcePanel() {
 function renderSingleChoiceList(name) {
   const filter = singleChoiceFilters[name];
   filter.list.innerHTML = "";
-  if (name === "size") {
-    if (selectedSizes.size) {
+  const multiSelected = name === "size" ? selectedSizes : (name === "gender" ? selectedGenders : null);
+  if (multiSelected) {
+    if (multiSelected.size) {
       const quickActions = document.createElement("div");
       quickActions.className = "sourceQuickActions";
       const clearButton = document.createElement("button");
       clearButton.type = "button";
       clearButton.className = "sourceQuickButton";
-      clearButton.textContent = `Clear (${selectedSizes.size})`;
+      clearButton.textContent = `Clear (${multiSelected.size})`;
       clearButton.addEventListener("click", () => {
-        selectedSizes.clear();
+        multiSelected.clear();
         updateSingleChoicePanels();
         render();
       });
@@ -1601,17 +1618,17 @@ function renderSingleChoiceList(name) {
       filter.list.append(quickActions);
     }
   }
-  const options = name === "size"
+  const options = multiSelected
     ? visibleChoiceOptions(name).filter((option) => option.value)
     : visibleChoiceOptions(name);
   for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
-    const isSelected = name === "size"
-      ? selectedSizes.has(option.value)
+    const isSelected = multiSelected
+      ? multiSelected.has(option.value)
       : option.value === filter.value;
     button.className = isSelected ? "sourceOption selected" : "sourceOption";
-    if (name === "size") {
+    if (multiSelected) {
       const checkbox = document.createElement("span");
       checkbox.className = "sourceCheck";
       const label = document.createElement("span");
@@ -1622,17 +1639,17 @@ function renderSingleChoiceList(name) {
       button.textContent = option.label;
     }
     button.addEventListener("click", () => {
-      if (name === "size") {
-        trackClick("size_filter_click", null, {
+      if (multiSelected) {
+        trackClick(`${name}_filter_click`, null, {
           title: option.label,
-          size: option.value,
+          [name]: option.value,
         });
         if (!option.value) {
-          selectedSizes.clear();
-        } else if (selectedSizes.has(option.value)) {
-          selectedSizes.delete(option.value);
+          multiSelected.clear();
+        } else if (multiSelected.has(option.value)) {
+          multiSelected.delete(option.value);
         } else {
-          selectedSizes.add(option.value);
+          multiSelected.add(option.value);
         }
         updateSingleChoicePanels();
         render();
@@ -1675,6 +1692,9 @@ function updateSingleChoicePanels() {
     const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
     if (name === "size") {
       selectedSizes = new Set([...selectedSizes].filter((value) => visibleValues.has(value)));
+    }
+    if (name === "gender") {
+      selectedGenders = new Set([...selectedGenders].filter((value) => visibleValues.has(value)));
     }
     if (!visibleValues.has(filter.value)) {
       filter.value = "";
@@ -2234,7 +2254,7 @@ function renderClickReport(data = latestClickReportData) {
 
   addTopGroup("Top stores", data?.topStores || []);
   addTopGroup("Top brands", data?.topBrands || []);
-  addTopGroup("Top products", data?.topProducts || []);
+  addTopGroup("Top clicks", data?.topProducts || []);
 
   const recentGroup = document.createElement("div");
   recentGroup.className = "reportGroup";
@@ -2352,7 +2372,7 @@ function filteredFinds() {
     if (choiceValue("type") === "clothes" && (isShoe || isAccessory)) return false;
     if (choiceValue("type") === "shoes" && !isShoe) return false;
     if (choiceValue("type") === "accessories" && !isAccessory) return false;
-    if (choiceValue("gender") && find.gender !== choiceValue("gender")) return false;
+    if (selectedGenders.size && !selectedGenders.has(find.gender)) return false;
     if (womenOnly && isShoe) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;
     if (selectedSources.size && !selectedSources.has(find.source)) return false;
@@ -2608,7 +2628,7 @@ womenOnlyButton.addEventListener("click", () => {
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.ageFit.value = "women";
-    singleChoiceFilters.gender.value = "";
+    selectedGenders.clear();
     applyAgeFitDefaults("women");
     closeOpenPanels();
     populateFilters(allFinds);
@@ -2632,7 +2652,7 @@ newOnlyButton.addEventListener("click", () => {
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.type.value = "";
     singleChoiceFilters.ageFit.value = "";
-    singleChoiceFilters.gender.value = "";
+    selectedGenders.clear();
     singleChoiceFilters.size.value = "";
     selectedSizes.clear();
     closeOpenPanels();
