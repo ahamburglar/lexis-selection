@@ -89,6 +89,7 @@ body {
 .promoToggleButton,
 .adminUnlockButton,
 .reportToggleButton,
+.deepRefreshButton,
 .stopRefreshButton {
   gap: 8px;
   border: 1px solid #e4d8ca;
@@ -107,6 +108,7 @@ body {
 .promoToggleButton:hover,
 .adminUnlockButton:hover,
 .reportToggleButton:hover,
+.deepRefreshButton:hover,
 .stopRefreshButton:hover {
   border-color: #d8bfaf;
   background: #fffdf8;
@@ -203,6 +205,10 @@ button {
 
 #refreshButton:hover {
   background: #304542;
+}
+
+.deepRefreshButton {
+  color: var(--ink);
 }
 
 button:disabled {

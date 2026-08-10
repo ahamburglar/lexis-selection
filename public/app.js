@@ -15,6 +15,7 @@ const toggleSourcesButton = document.querySelector("#toggleSourcesButton");
 const clearSourcesButton = document.querySelector("#clearSourcesButton");
 const adminUnlockButton = document.querySelector("#adminUnlockButton");
 const refreshButton = document.querySelector("#refreshButton");
+const deepRefreshButton = document.querySelector("#deepRefreshButton");
 const stopRefreshButton = document.querySelector("#stopRefreshButton");
 const countEl = document.querySelector("#count");
 const updatedEl = document.querySelector("#updated");
@@ -655,6 +656,17 @@ function sourceLabelText(data) {
   return data?.cacheSourceLabel || "Saved";
 }
 
+function formatDuration(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (value < 1000) return `${Math.round(value)}ms`;
+  const seconds = value / 1000;
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return `${minutes}m ${remainder}s`;
+}
+
 function looksLikeBrokenSavedData(data) {
   if (!data || typeof data !== "object") return false;
   const updatedAt = Date.parse(data.updatedAt || "");
@@ -671,9 +683,11 @@ function looksLikeBrokenSavedData(data) {
 function updateAdminControls() {
   const unlocked = Boolean(adminRefreshToken());
   refreshButton.hidden = !unlocked;
+  if (deepRefreshButton) deepRefreshButton.hidden = !unlocked;
   stopRefreshButton.hidden = !unlocked;
   stopRefreshButton.disabled = !refreshInProgress;
-  if (!refreshButton.disabled) refreshButton.textContent = selectedSources.size ? "Refresh selected" : "Refresh latest";
+  if (!refreshButton.disabled) refreshButton.textContent = selectedSources.size ? "Quick selected" : "Quick refresh";
+  if (deepRefreshButton && !deepRefreshButton.disabled) deepRefreshButton.textContent = selectedSources.size ? "Deep selected" : "Deep refresh";
   stopRefreshButton.textContent = refreshInProgress ? "Stop refresh" : "Stop refresh";
   if (!reportToggleButton || !refreshReport) {
     adminUnlockButton.textContent = unlocked ? "Admin unlocked" : "Admin unlock";
@@ -1789,7 +1803,13 @@ function renderBrandDirectory(brands) {
   const normalizedQuery = brandSearchQuery.trim().toLowerCase();
   const visibleBrands = brands.filter((brand) => !normalizedQuery || brand.toLowerCase().includes(normalizedQuery));
 
-  const styleCollections = brandStyleCollections
+  const dynamicBrandStyleCollections = brandStyleCollections.map((collection) => {
+    if (collection.id !== "shoes") return collection;
+    const shoeBrands = brands.filter((brand) => brandTypes.get(brand) === "shoes");
+    return { ...collection, brands: shoeBrands };
+  });
+
+  const styleCollections = dynamicBrandStyleCollections
     .map((collection) => ({
       ...collection,
       brands: collection.brands.filter((brand) => brands.includes(brand) && (!normalizedQuery || brand.toLowerCase().includes(normalizedQuery))),
@@ -2126,12 +2146,21 @@ function renderRefreshReport(data) {
   const productsScanned = report?.productsScanned ?? data.scanned;
   const newFinds = report?.newFinds ?? (data.finds || []).filter((find) => find.isNew).length;
   const priceDrops = report?.priceDrops ?? (data.finds || []).filter((find) => find.priceComparison?.priceDelta < -0.01).length;
+  const refreshMode = report?.refreshMode || data.refreshMode || "";
   const noPromoStores = report?.noPromoStores || sources
     .filter((source) => !source.promoNote && source.promoStatus !== "failed")
     .map((source) => ({ source: source.source, reason: source.promoReason || "No promo found." }));
   const failedStoreDetails = report?.failedStoreDetails || sources
     .filter((source) => source.scanStatus === "failed" || source.promoStatus === "failed")
     .map((source) => ({ source: source.source, reason: source.scanReason || source.promoReason || "Scan failed." }));
+  const slowStoreDetails = report?.slowStoreDetails || sources
+    .filter((source) => Number(source.durationMs) > 0)
+    .sort((a, b) => Number(b.durationMs) - Number(a.durationMs))
+    .slice(0, 12)
+    .map((source) => ({
+      source: source.source,
+      reason: `${formatDuration(source.durationMs)} · scanned ${Number(source.scanned || 0)} products · ${source.scanStatus || "ok"}`,
+    }));
 
   reportToggleButton.hidden = false;
   reportToggleButton.classList.toggle("active", reportOpen);
@@ -2148,6 +2177,7 @@ function renderRefreshReport(data) {
     ["New", String(newFinds)],
     ["Price drops", String(priceDrops)],
   ];
+  if (refreshMode) stats.splice(1, 0, ["Mode", refreshMode === "deep" ? "Deep" : "Quick"]);
 
   for (const [label, value] of stats) {
     const stat = document.createElement("div");
@@ -2160,7 +2190,7 @@ function renderRefreshReport(data) {
     reportStats.append(stat);
   }
 
-  reportDetailsButton.hidden = !noPromoStores.length && !failedStoreDetails.length;
+  reportDetailsButton.hidden = !noPromoStores.length && !failedStoreDetails.length && !slowStoreDetails.length;
   reportDetailsButton.textContent = reportDetailsOpen ? "Hide details" : "Show details";
   reportDetails.hidden = !reportDetailsOpen || reportDetailsButton.hidden;
   reportDetails.innerHTML = "";
@@ -2194,6 +2224,7 @@ function renderRefreshReport(data) {
   };
 
   addGroup("Stores that failed", failedStoreDetails, "problem");
+  addGroup("Slowest stores", slowStoreDetails);
   addGroup("Stores with no promo detected", noPromoStores);
 }
 
@@ -2331,6 +2362,8 @@ function applyData(data, labelPrefix = "Cached") {
     promoReason: item.promoReason || "",
     scanStatus: item.scanStatus || "",
     scanReason: item.scanReason || "",
+    durationMs: item.durationMs || 0,
+    scanMode: item.scanMode || "",
   }))
     .filter((item) => item.source);
   populateFilters(allFinds);
@@ -2486,7 +2519,7 @@ function render() {
   }
 }
 
-async function loadFinds(force = false) {
+async function loadFinds(force = false, refreshMode = "quick") {
   if (force && !adminRefreshToken() && !unlockAdminRefresh()) return;
   if (activeLoadController) activeLoadController.abort();
   const refreshSourceNames = force ? [...selectedSources] : [];
@@ -2495,15 +2528,19 @@ async function loadFinds(force = false) {
     refreshInProgress = true;
   }
   refreshButton.disabled = true;
-  refreshButton.textContent = refreshSourceNames.length ? "Refreshing selected..." : "Refreshing...";
+  if (deepRefreshButton) deepRefreshButton.disabled = true;
+  const refreshLabel = refreshMode === "deep" ? "Deep refreshing" : "Quick refreshing";
+  refreshButton.textContent = refreshSourceNames.length ? `${refreshLabel} selected...` : `${refreshLabel}...`;
+  if (deepRefreshButton) deepRefreshButton.textContent = refreshSourceNames.length ? `${refreshLabel} selected...` : `${refreshLabel}...`;
   updatedEl.textContent = force
-    ? (refreshSourceNames.length ? `Refreshing ${refreshSourceNames.length} selected store${refreshSourceNames.length === 1 ? "" : "s"}...` : "Refreshing from stores...")
+    ? (refreshSourceNames.length ? `${refreshLabel} ${refreshSourceNames.length} selected store${refreshSourceNames.length === 1 ? "" : "s"}...` : `${refreshLabel} from stores...`)
     : "Loading saved products...";
   updateAdminControls();
   try {
     const params = new URLSearchParams({ minDiscount: String(loadedMinDiscount) });
     params.set("_", String(Date.now()));
     if (force) params.set("refresh", "1");
+    if (force) params.set("refreshMode", refreshMode === "deep" ? "deep" : "quick");
     if (force && refreshSourceNames.length) params.set("sources", refreshSourceNames.join("|"));
     const headers = {};
     if (force) headers["x-admin-refresh-token"] = adminRefreshToken();
@@ -2547,10 +2584,14 @@ async function loadFinds(force = false) {
           applyData(event.data, "Cached");
         }
         if (event.type === "start") {
-          setProgress(0, event.total, `Scanning 0/${event.total} sources`);
+          const modeLabel = event.refreshMode === "deep" ? "Deep scanning" : "Quick scanning";
+          setProgress(0, event.total, `${modeLabel} 0/${event.total} sources`);
         }
         if (event.type === "store") {
-          const note = event.error ? `${event.source} skipped: ${event.error}` : `${event.source}: scanned ${event.scanned} products`;
+          const timeText = formatDuration(event.durationMs);
+          const note = event.error
+            ? `${event.source} skipped: ${event.error}${timeText ? ` · ${timeText}` : ""}`
+            : `${event.source}: scanned ${event.scanned} products${timeText ? ` · ${timeText}` : ""}`;
           setProgress(event.completed, event.total, `${event.completed}/${event.total} · ${note}`);
           applyData(event.data, "Refreshing");
         }
@@ -2583,6 +2624,7 @@ async function loadFinds(force = false) {
     activeLoadController = null;
     refreshInProgress = false;
     refreshButton.disabled = false;
+    if (deepRefreshButton) deepRefreshButton.disabled = false;
     updateAdminControls();
   }
 }
@@ -2725,7 +2767,8 @@ storeListSearch?.addEventListener("input", () => {
 });
 searchInput.addEventListener("input", updateSearchPanel);
 adminUnlockButton.addEventListener("click", unlockAdminRefresh);
-refreshButton.addEventListener("click", () => loadFinds(true));
+refreshButton.addEventListener("click", () => loadFinds(true, "quick"));
+deepRefreshButton?.addEventListener("click", () => loadFinds(true, "deep"));
 stopRefreshButton.addEventListener("click", stopRefresh);
 promoToggleButton.addEventListener("click", () => {
   promosOpen = !promosOpen;

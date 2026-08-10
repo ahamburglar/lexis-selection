@@ -79,7 +79,8 @@ await execFileAsync("node", ["server.mjs", "--write-snapshot"], {
   env: {
     ...process.env,
     BUILD_MIN_DISCOUNT: "0.4",
-    BUILD_FORCE_REFRESH: "1",
+    BUILD_FORCE_REFRESH: process.env.BUILD_FORCE_REFRESH || "0",
+    BUILD_REFRESH_MODE: process.env.BUILD_REFRESH_MODE || "quick",
   },
 });
 

@@ -1325,13 +1325,13 @@ async function fetchShopifyProductPaths(store, productPaths, pageCount) {
   return products;
 }
 
-async function fetchShopifyProducts(store, minDiscount = 0.4) {
+async function fetchShopifyProducts(store, minDiscount = 0.4, { refreshMode = "quick" } = {}) {
   if (store.mode === "collections") {
     const paths = store.collections.map((collection) => `/collections/${collection}/products.json`);
     return fetchShopifyProductPaths(store, paths, store.pages || 20);
   }
 
-  if (store.useSaleCollectionsOnly) {
+  if (store.useSaleCollectionsOnly || refreshMode === "quick") {
     const saleCollections = store.saleCollections || DEFAULT_SALE_COLLECTIONS;
     const salePaths = saleCollections.map((collection) => `/collections/${collection}/products.json`);
     return fetchShopifyProductPaths(store, salePaths, store.salePages || 4);
@@ -1559,12 +1559,12 @@ async function fetchLightspeedHomepageProducts(store) {
   return products;
 }
 
-async function fetchStoreProducts(store, minDiscount = 0.4) {
+async function fetchStoreProducts(store, minDiscount = 0.4, { refreshMode = "quick" } = {}) {
   if (store.mode === "childrensalon-sale") return fetchChildrensalonProducts(store);
   if (store.mode === "smallable-sale") return fetchSmallableProducts(store);
   if (store.mode === "ecwid-homepage") return fetchEcwidHomepageProducts(store);
   if (store.mode === "lightspeed-homepage") return fetchLightspeedHomepageProducts(store);
-  return fetchShopifyProducts(store, minDiscount);
+  return fetchShopifyProducts(store, minDiscount, { refreshMode });
 }
 
 function findIdsFromCache(cache, minDiscount) {
@@ -1640,6 +1640,17 @@ function priceComparisonsFromCaches(currentCache, previousCache, minDiscount) {
     .filter(Boolean);
 }
 
+function formatDurationMs(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (value < 1000) return `${Math.round(value)}ms`;
+  const seconds = value / 1000;
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return `${minutes}m ${remainder}s`;
+}
+
 function buildScanReport(cache, minDiscount, finds = null) {
   const visibleFinds = finds || findsFromCache(cache, minDiscount);
   const sources = cache.sources || [];
@@ -1660,6 +1671,15 @@ function buildScanReport(cache, minDiscount, finds = null) {
   ));
   const newCount = visibleFinds.filter((find) => find.isNew).length;
   const priceDropCount = visibleFinds.filter((find) => find.priceComparison?.priceDelta < -0.01).length;
+  const slowStoreDetails = sources
+    .filter((source) => Number.isFinite(Number(source.durationMs)) && Number(source.durationMs) > 0)
+    .sort((a, b) => Number(b.durationMs) - Number(a.durationMs))
+    .slice(0, 12)
+    .map((source) => ({
+      source: source.source,
+      durationMs: Number(source.durationMs),
+      reason: `${formatDurationMs(source.durationMs)} · scanned ${Number(source.scanned || 0)} products · ${source.scanStatus || "ok"}`,
+    }));
 
   return {
     totalStores: stores.length,
@@ -1670,6 +1690,7 @@ function buildScanReport(cache, minDiscount, finds = null) {
     finds: visibleFinds.length,
     newFinds: newCount,
     priceDrops: priceDropCount,
+    refreshMode: cache.refreshMode || "quick",
     promoFound,
     promoMissing: Math.max(0, stores.length - promoFound),
     dnsFailedStores: dnsFailedStores.length,
@@ -1685,10 +1706,11 @@ function buildScanReport(cache, minDiscount, finds = null) {
       source: source.source,
       reason: source.scanReason || source.promoReason || "Scan failed.",
     })),
+    slowStoreDetails,
   };
 }
 
-function cacheFromStoreBatches(storeBatches, { at = Date.now(), previousCache = null, minDiscount = 0.4 } = {}) {
+function cacheFromStoreBatches(storeBatches, { at = Date.now(), previousCache = null, minDiscount = 0.4, refreshMode = "quick" } = {}) {
   const byStoreAndHandle = new Map();
   for (const { store, products } of storeBatches) {
     for (const product of products) {
@@ -1703,11 +1725,14 @@ function cacheFromStoreBatches(storeBatches, { at = Date.now(), previousCache = 
 
   const cache = {
     at,
+    refreshMode,
     items: [...byStoreAndHandle.values()],
-    sources: storeBatches.map(({ store, products, promoResult, error, scanStatus, scanReason, scannedCount }) => ({
+    sources: storeBatches.map(({ store, products, promoResult, error, scanStatus, scanReason, scannedCount, durationMs, scanMode }) => ({
       source: store.source,
       baseUrl: store.baseUrl,
       scanned: scannedCount ?? products.length,
+      durationMs: Number.isFinite(Number(durationMs)) ? Number(durationMs) : 0,
+      scanMode: scanMode || refreshMode,
       scanStatus: scanStatus || (error ? "failed" : "ok"),
       scanReason: scanReason || (error ? error.message : ""),
       promoNote: store.promoNote || sanitizeStorePromoNote(store, promoResult?.promoNote || ""),
@@ -1773,12 +1798,15 @@ function snapshotFromCache(cache, minDiscount) {
     scanned: cache.items.length,
     count: finds.length,
     minDiscount,
+    refreshMode: cache.refreshMode || "quick",
     finds,
     brands: brandList.map((brand) => ({ brand: brand.name, type: brand.type || "clothes" })),
     sources: stores.map((store) => ({
       source: store.source,
       baseUrl: store.baseUrl,
       scanned: scannedBySource.get(store.source) || 0,
+      durationMs: sourceDetails.get(store.source)?.durationMs || 0,
+      scanMode: sourceDetails.get(store.source)?.scanMode || cache.refreshMode || "quick",
       promoNote: store.promoNote || promoBySource.get(store.source),
       scanStatus: sourceDetails.get(store.source)?.scanStatus || "pending",
       scanReason: sourceDetails.get(store.source)?.scanReason || "",
@@ -1798,12 +1826,15 @@ function emptySnapshot(minDiscount, reason = "No saved cache yet.") {
     scanned: 0,
     count: 0,
     minDiscount,
+    refreshMode: "quick",
     finds: [],
     brands: brandList.map((brand) => ({ brand: brand.name, type: brand.type || "clothes" })),
     sources: stores.map((store) => ({
       source: store.source,
       baseUrl: store.baseUrl,
       scanned: 0,
+      durationMs: 0,
+      scanMode: "pending",
       promoNote: store.promoNote || "",
       scanStatus: "pending",
       scanReason: reason,
@@ -1819,10 +1850,12 @@ function emptySnapshot(minDiscount, reason = "No saved cache yet.") {
       finds: 0,
       newFinds: 0,
       priceDrops: 0,
+      refreshMode: "quick",
       promoFound: 0,
       promoMissing: stores.length,
       noPromoStores: [],
       failedStoreDetails: [],
+      slowStoreDetails: [],
     },
   };
 }
@@ -1863,6 +1896,8 @@ function cacheFromSnapshot(snapshot) {
     return {
       source: store.source,
       scanned: Number.isFinite(scanned) ? scanned : items.filter((item) => item.store.source === store.source).length,
+      durationMs: Number.isFinite(Number(detail.durationMs)) ? Number(detail.durationMs) : 0,
+      scanMode: detail.scanMode || snapshot.refreshMode || "cached",
       promoNote: detail.promoNote || store.promoNote || "",
       scanStatus: detail.scanStatus || "cached",
       scanReason: detail.scanReason || "Recovered from saved snapshot.",
@@ -1877,6 +1912,7 @@ function cacheFromSnapshot(snapshot) {
     at,
     items,
     sources,
+    refreshMode: snapshot.refreshMode || snapshot.report?.refreshMode || "quick",
     newFindIds: [],
     priceComparisons: [],
     recoveredFromSnapshot: true,
@@ -1918,6 +1954,8 @@ function cachedBatchForStore(store, previousCache) {
     store,
     products,
     scannedCount: previousSource?.scanned ?? products.length,
+    durationMs: previousSource?.durationMs || 0,
+    scanMode: previousSource?.scanMode || "cached",
     scanStatus: "cached",
     scanReason: "Kept from previous cache; store was not selected for refresh.",
     promoResult: {
@@ -2008,7 +2046,7 @@ function formatFetchError(error) {
   return "fetch failed";
 }
 
-async function fetchFreshProductCache(onStore, { previousCache = null, minDiscount = 0.4, selectedSources = null } = {}) {
+async function fetchFreshProductCache(onStore, { previousCache = null, minDiscount = 0.4, selectedSources = null, refreshMode = "quick" } = {}) {
   const selectedSourceSet = selectedSources?.size ? selectedSources : null;
   const fallbackSnapshot = await readSavedSnapshotFile();
   const storesToRefresh = selectedSourceSet ? stores.filter((store) => selectedSourceSet.has(store.source)) : stores;
@@ -2022,20 +2060,38 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
   let nextStoreIndex = 0;
 
   async function refreshOneStore(store) {
+    const startedAt = Date.now();
     let products = [];
     let error = null;
     let promoResult = { promoNote: "", promoStatus: "not_found", promoReason: "Promo scan did not run." };
     let scanStatus = "ok";
     let scanReason = "";
+    let scanMode = refreshMode;
     try {
       const result = await Promise.allSettled([
-        fetchStoreProducts(store, minDiscount),
+        fetchStoreProducts(store, minDiscount, { refreshMode }),
         fetchStorePromoNote(store),
       ]);
       if (result[0].status === "fulfilled") products = result[0].value;
       else throw result[0].reason;
       if (result[1].status === "fulfilled") promoResult = result[1].value;
       else promoResult = { promoNote: "", promoStatus: "failed", promoReason: result[1].reason?.message || "Promo scan failed." };
+
+      if (refreshMode === "quick" && products.length === 0 && store.mode === "all-products") {
+        const previous = previousStoreState(store, previousCache, fallbackSnapshot);
+        if (previous?.products?.length) {
+          products = previous.products;
+          promoResult = {
+            promoNote: promoResult?.promoNote || previous.previousSource?.promoNote || "",
+            promoStatus: promoResult?.promoStatus === "found" ? "found" : (previous.previousSource?.promoStatus || (previous.previousSource?.promoNote ? "found" : "not_found")),
+            promoReason: promoResult?.promoReason || previous.previousSource?.promoReason || "Kept from previous cache after quick sale scan found no products.",
+          };
+          scanStatus = "cached";
+          scanReason = "Quick sale scan found no products; kept previous data. Use Deep refresh for a full-store scan.";
+        } else {
+          scanReason = "Quick sale scan found no products. Use Deep refresh for a full-store scan.";
+        }
+      }
     } catch (fetchError) {
       const previous = previousStoreState(store, previousCache, fallbackSnapshot);
       if (previous) {
@@ -2046,6 +2102,7 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
           promoReason: previous.previousSource?.promoReason || "Kept from previous cache after a temporary refresh error.",
         };
         scanStatus = "cached";
+        scanMode = previous.previousSource?.scanMode || refreshMode;
         scanReason = `Kept previous data after a temporary refresh error. ${formatFetchError(fetchError)}`;
       } else {
         error = fetchError;
@@ -2054,7 +2111,8 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
     }
 
     completed += 1;
-    const batch = { store, products, promoResult, error, scanStatus, scanReason };
+    const durationMs = Date.now() - startedAt;
+    const batch = { store, products, promoResult, error, scanStatus, scanReason, durationMs, scanMode };
     storeBatches.push(batch);
     if (onStore) {
       await onStore({
@@ -2063,7 +2121,9 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
         error,
         completed,
         total: storesToRefresh.length,
-        cache: cacheFromStoreBatches(storeBatches, { previousCache, minDiscount }),
+        durationMs,
+        scanMode,
+        cache: cacheFromStoreBatches(storeBatches, { previousCache, minDiscount, refreshMode }),
       });
     }
   }
@@ -2086,14 +2146,14 @@ async function fetchFreshProductCache(onStore, { previousCache = null, minDiscou
   const workerCount = Math.min(STORE_REFRESH_CONCURRENCY, storesToRefresh.length || 1);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
-  productCache = cacheFromStoreBatches(storeBatches, { previousCache, minDiscount });
+  productCache = cacheFromStoreBatches(storeBatches, { previousCache, minDiscount, refreshMode });
   await writeProductCacheFile(productCache).catch((error) => {
     console.warn(`Could not write local product cache: ${error.message}`);
   });
   return productCache;
 }
 
-async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSources = null) {
+async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSources = null, refreshMode = "quick") {
   if (!force) {
     const savedCache = await loadLatestAvailableCache();
     if (savedCache) return savedCache;
@@ -2102,7 +2162,7 @@ async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSou
   if (productCacheRefresh && !selectedSources?.size) return productCacheRefresh;
 
   const previousCache = await readProductCacheFile();
-  productCacheRefresh = fetchFreshProductCache(null, { previousCache, minDiscount, selectedSources });
+  productCacheRefresh = fetchFreshProductCache(null, { previousCache, minDiscount, selectedSources, refreshMode });
 
   try {
     return await productCacheRefresh;
@@ -2111,25 +2171,25 @@ async function cachedStoreProducts(force = false, minDiscount = 0.4, selectedSou
   }
 }
 
-async function latestFinds({ force = false, minDiscount = 0.7, selectedSources = null } = {}) {
+async function latestFinds({ force = false, minDiscount = 0.7, selectedSources = null, refreshMode = "quick" } = {}) {
   if (!force && !selectedSources?.size) {
     const savedCache = await loadLatestAvailableCache();
     if (savedCache) return snapshotFromCache(savedCache, minDiscount);
     const savedSnapshot = await readSavedSnapshotFile();
     if (savedSnapshot) return savedSnapshot;
   }
-  const cached = await cachedStoreProducts(force, minDiscount, selectedSources);
+  const cached = await cachedStoreProducts(force, minDiscount, selectedSources, refreshMode);
   return snapshotFromCache(cached, minDiscount);
 }
 
-async function writeDeploySnapshot({ minDiscount = 0.7, force = false } = {}) {
-  const snapshot = await latestFinds({ force, minDiscount });
+async function writeDeploySnapshot({ minDiscount = 0.7, force = false, refreshMode = "quick" } = {}) {
+  const snapshot = await latestFinds({ force, minDiscount, refreshMode });
   await fs.mkdir(path.dirname(snapshotFile), { recursive: true });
   await fs.writeFile(snapshotFile, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
   return snapshot;
 }
 
-async function streamFinds(res, { force = false, minDiscount = 0.7, selectedSources = null } = {}) {
+async function streamFinds(res, { force = false, minDiscount = 0.7, selectedSources = null, refreshMode = "quick" } = {}) {
   res.writeHead(200, {
     "content-type": "application/x-ndjson; charset=utf-8",
     "cache-control": "no-store",
@@ -2150,18 +2210,20 @@ async function streamFinds(res, { force = false, minDiscount = 0.7, selectedSour
 
   const previousCache = await readProductCacheFile();
   const refreshTotal = selectedSources?.size ? stores.filter((store) => selectedSources.has(store.source)).length : stores.length;
-  send({ type: "start", total: refreshTotal });
-  const finalCache = await fetchFreshProductCache(async ({ store, products, error, completed, total, cache }) => {
+  send({ type: "start", total: refreshTotal, refreshMode });
+  const finalCache = await fetchFreshProductCache(async ({ store, products, error, completed, total, cache, durationMs, scanMode }) => {
     send({
       type: "store",
       source: store.source,
       completed,
       total,
       scanned: products.length,
+      durationMs,
+      scanMode,
       error: error ? error.message : "",
       data: snapshotFromCache(cache, minDiscount),
     });
-  }, { previousCache, minDiscount, selectedSources });
+  }, { previousCache, minDiscount, selectedSources, refreshMode });
   send({ type: "done", data: snapshotFromCache(finalCache, minDiscount) });
   res.end();
 }
@@ -2391,10 +2453,12 @@ const server = http.createServer(async (req, res) => {
       }
       const requestedDiscount = Number.parseFloat(url.searchParams.get("minDiscount") || "0.7");
       const minDiscount = Number.isFinite(requestedDiscount) ? Math.min(Math.max(requestedDiscount, 0.3), 0.9) : 0.7;
+      const refreshMode = url.searchParams.get("refreshMode") === "deep" ? "deep" : "quick";
       await streamFinds(res, {
         force: forceRefresh,
         minDiscount,
         selectedSources,
+        refreshMode,
       });
     } catch (error) {
       if (!res.headersSent) res.writeHead(500, { "content-type": "application/x-ndjson; charset=utf-8" });
@@ -2412,10 +2476,12 @@ const server = http.createServer(async (req, res) => {
       }
       const requestedDiscount = Number.parseFloat(url.searchParams.get("minDiscount") || "0.7");
       const minDiscount = Number.isFinite(requestedDiscount) ? Math.min(Math.max(requestedDiscount, 0.3), 0.9) : 0.7;
+      const refreshMode = url.searchParams.get("refreshMode") === "deep" ? "deep" : "quick";
       const data = await latestFinds({
         force: forceRefresh,
         minDiscount,
         selectedSources,
+        refreshMode,
       });
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(JSON.stringify(data));
@@ -2432,7 +2498,8 @@ if (process.argv.includes("--write-snapshot")) {
   const requestedDiscount = Number.parseFloat(process.env.BUILD_MIN_DISCOUNT || "0.7");
   const minDiscount = Number.isFinite(requestedDiscount) ? Math.min(Math.max(requestedDiscount, 0.3), 0.9) : 0.7;
   const force = process.env.BUILD_FORCE_REFRESH === "1";
-  const snapshot = await writeDeploySnapshot({ minDiscount, force });
+  const refreshMode = process.env.BUILD_REFRESH_MODE === "deep" ? "deep" : "quick";
+  const snapshot = await writeDeploySnapshot({ minDiscount, force, refreshMode });
   console.log(`Wrote deploy snapshot with ${snapshot.sources?.length || 0} sources and ${snapshot.finds?.length || 0} finds.`);
 } else {
   server.listen(PORT, "127.0.0.1", () => {
