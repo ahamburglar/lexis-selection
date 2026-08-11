@@ -41,6 +41,7 @@ const promoList = document.querySelector("#promoList");
 const promoCount = document.querySelector("#promoCount");
 const promoToggleButton = document.querySelector("#promoToggleButton");
 const storeListSearch = document.querySelector("#storeListSearch");
+const shuffleButton = document.querySelector("#shuffleButton");
 const backgroundRemovedImageCache = new Map();
 const imageProcessObserver = "IntersectionObserver" in window
   ? new IntersectionObserver((entries) => {
@@ -79,6 +80,7 @@ let activeLoadController = null;
 let refreshInProgress = false;
 let refreshBackupData = null;
 let latestCompleteData = null;
+let shuffleSeed = Math.random();
 const adminRefreshTokenKey = "lexiMomAdminRefreshToken";
 const favoriteBrands = ["Billieblush", "Floss", "Wynken", "Emile et Ida"];
 const brandStyleCollections = [
@@ -178,6 +180,17 @@ const brandStyleCollections = [
       "Donsje",
     ],
   },
+  {
+    id: "accessories",
+    label: "Accessories",
+    brands: [
+      "Meri Meri",
+      "Maileg",
+      "Ooly",
+      "Super Smalls",
+      "Rockahula Kids",
+    ],
+  },
 ];
 let brandSearchQuery = "";
 let sourceSearchQuery = "";
@@ -239,6 +252,8 @@ const newlyAddedSources = [
   "Cocoleto",
   "English Rabbit",
   "ATLR Paris",
+  "The Little Being",
+  "Jean + Hadley",
 ];
 const trustedStoreSources = new Set([
   "Buttons and Bows NY",
@@ -374,6 +389,8 @@ const storeHomeUrls = new Map([
   ["Cocoleto", "https://cocoleto.com"],
   ["English Rabbit", "https://englishrabbit.com"],
   ["ATLR Paris", "https://atlrparis.com"],
+  ["The Little Being", "https://thelittlebeing.com"],
+  ["Jean + Hadley", "https://www.jeanandhadley.com"],
 ]);
 
 const storeInstagramUrls = new Map([
@@ -476,6 +493,8 @@ const storeInstagramUrls = new Map([
   ["Cocoleto", "https://www.instagram.com/shopcocoleto/"],
   ["English Rabbit", "https://www.instagram.com/englishrabbit/"],
   ["ATLR Paris", "https://www.instagram.com/atlr.paris/"],
+  ["The Little Being", "https://www.instagram.com/thelittlebeingshop/"],
+  ["Jean + Hadley", "https://www.instagram.com/jeanandhadley_official/"],
   ["Murray & Finn", "https://www.instagram.com/murrayandfinn/"],
   ["Buttons Bebe", "https://www.instagram.com/buttonsbebe/"],
   ["Les Mini", "https://www.instagram.com/shoplesmini/"],
@@ -747,9 +766,10 @@ const singleChoiceFilters = {
       { value: "alpha-desc", label: "Alphabetically, Z-A" },
       { value: "price-asc", label: "Price, low to high" },
       { value: "price-desc", label: "Price, high to low" },
-      { value: "discount-desc", label: "Discount, highest to lowest" },
       { value: "date-asc", label: "Date, old to new" },
       { value: "date-desc", label: "Date, new to old" },
+      { value: "shuffle", label: "Shuffle" },
+      { value: "discount-desc", label: "Discount, highest to lowest" },
     ],
     toggle: document.querySelector("#sortToggleArea"),
     summary: document.querySelector("#sortSummary"),
@@ -1115,10 +1135,24 @@ function compareCurrentFeedOrder(a, b) {
   return originalSortIndex(a) - originalSortIndex(b);
 }
 
+function stableShuffleValue(find) {
+  const text = `${shuffleSeed}|${find.source || ""}|${find.brand || ""}|${find.title || ""}|${find.url || ""}`;
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function sortFinds(finds) {
   const sortValue = choiceValue("sort");
   const items = [...finds];
   items.sort((a, b) => {
+    if (sortValue === "shuffle") {
+      return compareNumbers(stableShuffleValue(a), stableShuffleValue(b))
+        || compareCurrentFeedOrder(a, b);
+    }
     if (sortValue === "alpha-asc") {
       return compareTitles(a, b)
         || compareNumbers(a.salePrice, b.salePrice)
@@ -1211,21 +1245,23 @@ function yearsFromSize(size = "") {
   const years = [];
   if (isBabySize(size)) return years;
 
-  for (const match of lower.matchAll(/(\d+)\s*-\s*(\d+)\s*([ym])?/g)) {
-    if (match[3] === "m") continue;
+  for (const match of lower.matchAll(/\b(\d{1,2})\s*-\s*(\d{1,2})\s*(?:y|yr|yrs|year|years)?\b/g)) {
     const start = Number(match[1]);
     const end = Number(match[2]);
-    if (Number.isFinite(start) && Number.isFinite(end)) {
+    if (Number.isFinite(start) && Number.isFinite(end) && start > 0 && end <= 18 && end >= start) {
       for (let year = start; year <= end; year += 1) years.push(year);
     }
   }
 
-  for (const match of lower.matchAll(/(\d+)\s*y\b/g)) {
+  for (const match of lower.matchAll(/\b(\d{1,2})\s*(?:y|yr|yrs|year|years)\b/g)) {
     const year = Number(match[1]);
-    if (Number.isFinite(year)) years.push(year);
+    if (Number.isFinite(year) && year > 0 && year <= 18) years.push(year);
   }
 
-  if (!years.length && /^\d+$/.test(lower)) years.push(Number(lower));
+  if (!years.length && /^\d{1,2}$/.test(lower)) {
+    const year = Number(lower);
+    if (year > 0 && year <= 18) years.push(year);
+  }
   return [...new Set(years)];
 }
 
@@ -1304,6 +1340,7 @@ function visibleChoiceOptions(name) {
   }
   if (name !== "size") return filter.options;
   const ageFit = choiceValue("ageFit");
+  if (!ageFit) return filter.options;
   return filter.options.filter((option) => {
     if (option.value === "") return true;
     if (option.ageFits) return option.ageFits.includes(ageFit);
@@ -1332,7 +1369,7 @@ function applyAgeFitDefaults(ageFit) {
 
 function isShoeFind(find) {
   const text = [find.title, find.category].join(" ").toLowerCase();
-  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|footie|footies|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
+  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
 }
 
 function isAccessoryFind(find) {
@@ -1341,7 +1378,7 @@ function isAccessoryFind(find) {
   const title = String(find.title || "").toLowerCase();
   const category = String(find.category || "").toLowerCase();
   const clothingText = [title, category].join(" ");
-  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
+  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|footie|footies|sleeper|sleepers|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
   const broadApparelCategory = /\bapparel\s*(?:&|and)\s*accessories\b/.test(category);
   const accessoryPattern = /\b(accessory|accessories|hairgoods|hair|bow|bows|bow tie|clip|clips|barrette|headband|scrunchie|ribbon|toy|toys|doll|dolls|activity|rattle|teether|pacifier|blanket|bag|bags|purse|backpack|pouch|nap mat|quilt|quilts|quilted|basket|baskets|stationery|stationary|pencil|notebook|sticker|stickers|poster|print|lunch|bottle|cup|tableware|plate|bib|swaddle|towel|bath|decor|ornament|costume|dress up|jewelry|jewellery|necklace|bracelet|ring|hat|hats|sun hat|swim hat|bucket hat|beanie|bonnet|mitten|mittens|crown)\b/;
 
@@ -1632,9 +1669,11 @@ function renderSingleChoiceList(name) {
       filter.list.append(quickActions);
     }
   }
+  const visibleOptions = visibleChoiceOptions(name)
+    .filter((option) => !(name === "sort" && option.value === "shuffle"));
   const options = multiSelected
-    ? visibleChoiceOptions(name).filter((option) => option.value)
-    : visibleChoiceOptions(name);
+    ? visibleOptions.filter((option) => option.value)
+    : visibleOptions;
   for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1670,6 +1709,9 @@ function renderSingleChoiceList(name) {
         return;
       }
       filter.value = option.value;
+      if (name === "sort" && option.value === "shuffle") {
+        shuffleSeed = Math.random();
+      }
       trackClick(`${name}_filter_click`, null, {
         title: option.label,
         [name]: option.value,
@@ -1804,9 +1846,13 @@ function renderBrandDirectory(brands) {
   const visibleBrands = brands.filter((brand) => !normalizedQuery || brand.toLowerCase().includes(normalizedQuery));
 
   const dynamicBrandStyleCollections = brandStyleCollections.map((collection) => {
-    if (collection.id !== "shoes") return collection;
-    const shoeBrands = brands.filter((brand) => brandTypes.get(brand) === "shoes");
-    return { ...collection, brands: shoeBrands };
+    if (collection.id === "shoes") {
+      return { ...collection, brands: brands.filter((brand) => brandTypes.get(brand) === "shoes") };
+    }
+    if (collection.id === "accessories") {
+      return { ...collection, brands: brands.filter((brand) => brandTypes.get(brand) === "accessories") };
+    }
+    return collection;
   });
 
   const styleCollections = dynamicBrandStyleCollections
@@ -2535,6 +2581,10 @@ async function loadFinds(force = false, refreshMode = "quick") {
   updatedEl.textContent = force
     ? (refreshSourceNames.length ? `${refreshLabel} ${refreshSourceNames.length} selected store${refreshSourceNames.length === 1 ? "" : "s"}...` : `${refreshLabel} from stores...`)
     : "Loading saved products...";
+  if (force) {
+    const expectedTotal = refreshSourceNames.length || allSources.length || 1;
+    setProgress(0, expectedTotal, `${refreshLabel} starting...`);
+  }
   updateAdminControls();
   try {
     const params = new URLSearchParams({ minDiscount: String(loadedMinDiscount) });
@@ -2546,7 +2596,7 @@ async function loadFinds(force = false, refreshMode = "quick") {
     if (force) headers["x-admin-refresh-token"] = adminRefreshToken();
     const controller = new AbortController();
     activeLoadController = controller;
-    const timeoutId = window.setTimeout(() => controller.abort(), force ? 60000 : 15000);
+    const timeoutId = window.setTimeout(() => controller.abort(), force ? 4 * 60 * 60 * 1000 : 15000);
     const endpoint = force ? `/api/finds/stream?${params}` : `/api/finds?${params}`;
     const response = await fetch(endpoint, { headers, signal: controller.signal });
     window.clearTimeout(timeoutId);
@@ -2770,6 +2820,17 @@ adminUnlockButton.addEventListener("click", unlockAdminRefresh);
 refreshButton.addEventListener("click", () => loadFinds(true, "quick"));
 deepRefreshButton?.addEventListener("click", () => loadFinds(true, "deep"));
 stopRefreshButton.addEventListener("click", stopRefresh);
+shuffleButton?.addEventListener("click", () => {
+  shuffleSeed = Math.random();
+  singleChoiceFilters.sort.value = "shuffle";
+  closeOpenPanels();
+  updateSingleChoicePanels();
+  shuffleButton.classList.remove("isShuffling");
+  void shuffleButton.offsetWidth;
+  shuffleButton.classList.add("isShuffling");
+  trackClick("shuffle_click", null, { title: "Shuffle" });
+  render();
+});
 promoToggleButton.addEventListener("click", () => {
   promosOpen = !promosOpen;
   renderPromoBoard();

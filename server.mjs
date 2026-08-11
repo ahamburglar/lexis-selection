@@ -10,7 +10,7 @@ const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.PORT || 5173);
 const ADMIN_REFRESH_TOKEN = process.env.ADMIN_REFRESH_TOKEN || "";
 const STORE_REFRESH_CONCURRENCY = Math.max(1, Number(process.env.STORE_REFRESH_CONCURRENCY || 3) || 3);
-const STORE_REFRESH_JITTER_MS = Math.max(0, Number(process.env.STORE_REFRESH_JITTER_MS || 3000) || 3000);
+const STORE_REFRESH_JITTER_MS = Math.max(0, Number(process.env.STORE_REFRESH_JITTER_MS || 1000) || 1000);
 const DEFAULT_SALE_COLLECTIONS = [
   "sale",
   "sales",
@@ -650,6 +650,16 @@ const stores = [
     baseUrl: "https://atlrparis.com",
     mode: "all-products",
   },
+  {
+    source: "The Little Being",
+    baseUrl: "https://thelittlebeing.com",
+    mode: "all-products",
+  },
+  {
+    source: "Jean + Hadley",
+    baseUrl: "https://www.jeanandhadley.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;
@@ -1176,7 +1186,7 @@ function inferGender(product) {
 
 function isShoeProduct(product) {
   const text = [product.title, product.product_type, ...(product.tags || [])].join(" ").toLowerCase();
-  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|footie|footies|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
+  return /\b(shoe|shoes|sandal|sandals|sneaker|sneakers|boot|boots|snowboot|snowboots|bootie|booties|loafer|loafers|mary jane|slipper|slippers|clog|clogs|flat|flats)\b/.test(text);
 }
 
 function isAccessoryProduct(product) {
@@ -1184,7 +1194,7 @@ function isAccessoryProduct(product) {
   const category = String(product.product_type || "").toLowerCase();
   const tags = (product.tags || []).join(" ").toLowerCase();
   const clothingText = [title, category].join(" ");
-  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
+  const clothingPattern = /\b(apparel|clothes|clothing|dress|dresses|shirt|shirts|tee|t-shirt|tank|top|tops|blouse|sweatshirt|sweater|cardigan|pant|pants|panty|trackpant|trackpants|sweatpant|sweatpants|trouser|trousers|legging|leggings|short|shorts|skirt|bottom|bottoms|romper|rompers|onesie|bodysuit|jumpsuit|jumpsuits|playsuit|playsuits|bubble|bubbles|overall|overalls|jacket|coat|swim|rashguard|bikini|bra|sports bra|tight|tights|sock|socks|footie|footies|sleeper|sleepers|pajama|pajamas|pyjama|pyjamas|layette|set|sweatsuit|tracksuit|bloomer|bloomers|jumper|jumpers|turtleneck|roll neck|one piece|sleepy doe)\b/;
   const broadApparelCategory = /\bapparel\s*(?:&|and)\s*accessories\b/.test(category);
   const accessoryPattern = /\b(accessory|accessories|hairgoods|hair|bow|bows|bow tie|clip|clips|barrette|headband|scrunchie|ribbon|toy|toys|doll|dolls|activity|rattle|teether|pacifier|blanket|bag|bags|purse|backpack|pouch|nap mat|quilt|quilts|quilted|basket|baskets|stationery|stationary|pencil|notebook|sticker|stickers|poster|print|lunch|bottle|cup|tableware|plate|bib|swaddle|towel|bath|decor|ornament|costume|dress up|jewelry|jewellery|necklace|bracelet|ring|hat|hats|sun hat|swim hat|bucket hat|beanie|bonnet|mitten|mittens|crown)\b/;
 

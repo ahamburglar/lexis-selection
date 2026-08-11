@@ -535,5 +535,101 @@
     "matches": ["bonjour", "bonjour diary"],
     "collections": ["bonjour", "bonjour-diary"],
     "type": "clothes"
+  },
+  {
+    "name": "Morley",
+    "matches": ["morley"],
+    "collections": ["morley"],
+    "type": "clothes"
+  },
+  {
+    "name": "Pink Chicken",
+    "matches": ["pink chicken"],
+    "collections": ["pink-chicken"],
+    "type": "clothes"
+  },
+  {
+    "name": "Tocoto Vintage",
+    "matches": ["tocoto vintage", "tocoto"],
+    "collections": ["tocoto-vintage", "tocoto"],
+    "type": "clothes"
+  },
+  {
+    "name": "Mipounet",
+    "matches": ["mipounet"],
+    "collections": ["mipounet"],
+    "type": "clothes"
+  },
+  {
+    "name": "Buho",
+    "matches": ["buho", "búho"],
+    "collections": ["buho"],
+    "type": "clothes"
+  },
+  {
+    "name": "The Campamento",
+    "matches": ["the campamento", "campamento"],
+    "collections": ["the-campamento", "campamento"],
+    "type": "clothes"
+  },
+  {
+    "name": "Tartine et Chocolat",
+    "matches": ["tartine et chocolat", "tartine & chocolat"],
+    "collections": ["tartine-et-chocolat", "tartine-chocolat"],
+    "type": "clothes"
+  },
+  {
+    "name": "Jamie Kay",
+    "matches": ["jamie kay"],
+    "collections": ["jamie-kay"],
+    "type": "clothes"
+  },
+  {
+    "name": "Lali",
+    "matches": ["lali"],
+    "collections": ["lali"],
+    "type": "clothes"
+  },
+  {
+    "name": "Petite Amalie",
+    "matches": ["petite amalie"],
+    "collections": ["petite-amalie"],
+    "type": "clothes"
+  },
+  {
+    "name": "Soor Ploom",
+    "matches": ["soor ploom"],
+    "collections": ["soor-ploom"],
+    "type": "clothes"
+  },
+  {
+    "name": "Meri Meri",
+    "matches": ["meri meri"],
+    "collections": ["meri-meri"],
+    "type": "accessories"
+  },
+  {
+    "name": "Maileg",
+    "matches": ["maileg"],
+    "collections": ["maileg"],
+    "type": "accessories"
+  },
+  {
+    "name": "Ooly",
+    "matches": ["ooly"],
+    "collections": ["ooly"],
+    "type": "accessories"
+  },
+  {
+    "name": "Super Smalls",
+    "matches": ["super smalls"],
+    "collections": ["super-smalls"],
+    "type": "accessories"
+  },
+  {
+    "name": "Rockahula Kids",
+    "matches": ["rockahula kids", "rockahula"],
+    "collections": ["rockahula-kids", "rockahula"],
+    "type": "accessories"
   }
 ]
