@@ -1417,6 +1417,11 @@ function isAccessoryFind(find) {
   return accessoryPattern.test([title, category].join(" "));
 }
 
+function isGirlCodedClothing(find) {
+  const text = [find.title, find.category, find.brand].join(" ").toLowerCase();
+  return /\b(dress|dresses|skirt|skirts|tutu|tutus|blouse|blouses|bikini|bikinis|swimsuit|swimsuits|tankini|tankinis|leotard|leotards|tights|maillot|maillots|hair bow|hair bows|ruffle|ruffles|ruffled|frill|frills|frilly|smock|smocked|smocking|puff sleeve|puff sleeves|flutter sleeve|flutter sleeves|one-piece swimsuit|one piece swimsuit|bathing suit|bathing suits|swim suit|swim suits)\b/.test(text);
+}
+
 function shoeSizesFromSize(size = "") {
   const lower = size.toLowerCase();
   const sizes = [];
@@ -2483,6 +2488,7 @@ function filteredFinds() {
     if (choiceValue("type") === "shoes" && !isShoe) return false;
     if (choiceValue("type") === "accessories" && !isAccessory) return false;
     if (selectedGenders.size && !selectedGenders.has(find.gender)) return false;
+    if (selectedGenders.has("boys") && !selectedGenders.has("girls") && isGirlCodedClothing(find)) return false;
     if (womenOnly && isShoe) return false;
     if (selectedBrands.size && !selectedBrands.has(find.brand)) return false;
     if (selectedSources.size && !selectedSources.has(find.source)) return false;

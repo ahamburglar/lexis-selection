@@ -654,6 +654,8 @@ const stores = [
     source: "The Little Being",
     baseUrl: "https://thelittlebeing.com",
     mode: "all-products",
+    quickUsesAllProducts: true,
+    quickPages: 2,
   },
   {
     source: "Shoppe Balloo",
@@ -1189,9 +1191,11 @@ function inferGender(product) {
   const hasWomen = /\b(women|womens|woman|ladies|lady|femme|damen|mujer)\b/.test(text);
   const hasGirls = /\b(girl|girls)\b/.test(text) || text.includes("baby girl");
   const hasBoys = /\b(boy|boys)\b/.test(text) || text.includes("baby boy");
+  const hasGirlCodedClothing = /\b(dress|dresses|skirt|skirts|tutu|tutus|blouse|blouses|bikini|bikinis|swimsuit|swimsuits|tankini|tankinis|leotard|leotards|tights|maillot|maillots|hair bow|hair bows|ruffle|ruffles|ruffled|frill|frills|frilly|smock|smocked|smocking|puff sleeve|puff sleeves|flutter sleeve|flutter sleeves|one-piece swimsuit|one piece swimsuit|bathing suit|bathing suits|swim suit|swim suits)\b/.test(text);
   if (hasWomen) return "women";
   if (hasGirls && !hasBoys) return "girls";
   if (hasBoys && !hasGirls) return "boys";
+  if (hasGirlCodedClothing && !hasBoys) return "girls";
   return "neutral";
 }
 
@@ -1354,6 +1358,10 @@ async function fetchShopifyProducts(store, minDiscount = 0.4, { refreshMode = "q
   if (store.mode === "collections") {
     const paths = store.collections.map((collection) => `/collections/${collection}/products.json`);
     return fetchShopifyProductPaths(store, paths, store.pages || 20);
+  }
+
+  if (refreshMode === "quick" && store.quickUsesAllProducts) {
+    return fetchShopifyProductPaths(store, ["/products.json"], store.quickPages || store.salePages || 4);
   }
 
   if (store.useSaleCollectionsOnly || refreshMode === "quick") {
