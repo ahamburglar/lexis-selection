@@ -429,9 +429,27 @@
     "type": "clothes"
   },
   {
+    "name": "Lola + The Boys",
+    "matches": ["lola and the boys", "lola + the boys", "lolaandtheboys"],
+    "collections": ["lola-and-the-boys", "lola-the-boys", "lolaandtheboys"],
+    "type": "clothes"
+  },
+  {
     "name": "Mabli",
     "matches": ["mabli", "mabli knits"],
     "collections": ["mabli", "mabli-knits"],
+    "type": "clothes"
+  },
+  {
+    "name": "Maison Pimpim",
+    "matches": ["maison pimpim", "maisonpimpim"],
+    "collections": ["maison-pimpim", "maisonpimpim"],
+    "type": "clothes"
+  },
+  {
+    "name": "Minimalisma",
+    "matches": ["minimalisma"],
+    "collections": ["minimalisma"],
     "type": "clothes"
   },
   {

@@ -98,6 +98,10 @@ const brandStyleCollections = [
       "Bonton",
       "Emile et Ida",
       "Louis Louise",
+      "Bonjour",
+      "Bachaa",
+      "Tartine et Chocolat",
+      "Maison Pimpim",
       "Jacadi",
       "Petit Bateau",
       "Nellystella",
@@ -118,9 +122,11 @@ const brandStyleCollections = [
       "Gray Label",
       "Liewood",
       "Mabli",
+      "Minimalisma",
       "MarMar Copenhagen",
       "Organic Zoo",
       "Silly Silas",
+      "Kuling",
     ],
   },
   {
@@ -140,6 +146,10 @@ const brandStyleCollections = [
       "The New Society",
       "Wynken",
       "Huxbaby",
+      "Lola + The Boys",
+      "Pink Chicken",
+      "The Campamento",
+      "Morley",
     ],
   },
   {
@@ -155,6 +165,12 @@ const brandStyleCollections = [
       "Boheme",
       "Bebe Organic",
       "Tutu Du Monde",
+      "Soor Ploom",
+      "Lali",
+      "Petite Amalie",
+      "Jamie Kay",
+      "Mipounet",
+      "Buho",
     ],
   },
   {
@@ -167,6 +183,9 @@ const brandStyleCollections = [
       "Nellystella",
       "Billieblush",
       "Bonpoint",
+      "Maison Pimpim",
+      "Tartine et Chocolat",
+      "Lola + The Boys",
     ],
   },
   {
@@ -177,6 +196,14 @@ const brandStyleCollections = [
       "See Kai Run",
       "Bisgaard",
       "Bundgaard",
+      "Naturino",
+      "Falcotto",
+      "Pom d'Api",
+      "Cienta",
+      "Igor",
+      "Veja Kids",
+      "Camper",
+      "Tip Toey Joey",
       "Donsje",
     ],
   },
@@ -494,6 +521,8 @@ const storeInstagramUrls = new Map([
   ["English Rabbit", "https://www.instagram.com/englishrabbit/"],
   ["ATLR Paris", "https://www.instagram.com/atlr.paris/"],
   ["The Little Being", "https://www.instagram.com/thelittlebeingshop/"],
+  ["Shoppe Balloo", "https://www.instagram.com/shoppe.balloo/"],
+  ["Dearly", "https://www.instagram.com/welovedearly/"],
   ["Jean + Hadley", "https://www.instagram.com/jeanandhadley_official/"],
   ["Murray & Finn", "https://www.instagram.com/murrayandfinn/"],
   ["Buttons Bebe", "https://www.instagram.com/buttonsbebe/"],
@@ -1819,6 +1848,7 @@ function closeOpenPanels() {
   updateSearchPanel();
   renderPromoBoard();
   if (latestReportData) renderRefreshReport(latestReportData);
+  renderClickReport();
 }
 
 function renderBrandDirectory(brands) {
@@ -2364,6 +2394,7 @@ function renderClickReport(data = latestClickReportData) {
 async function loadClickReport() {
   if (!adminRefreshToken() && !unlockAdminRefresh()) return;
   if (!clickReportStats || !clickReportDetails) return;
+  const shouldRenderWhenLoaded = clickReportOpen;
   clickReportStats.innerHTML = "";
   clickReportDetails.innerHTML = "<div class=\"reportItem\">Loading clicks...</div>";
   try {
@@ -2373,7 +2404,7 @@ async function loadClickReport() {
     if (response.status === 401) throw new Error("Admin unlock required.");
     if (!response.ok) throw new Error("Could not load click report");
     latestClickReportData = await response.json();
-    renderClickReport(latestClickReportData);
+    if (shouldRenderWhenLoaded && clickReportOpen) renderClickReport(latestClickReportData);
   } catch (error) {
     if (/admin unlock|required|unauthorized/i.test(error.message)) lockAdminRefresh();
     if (clickReportDetails) clickReportDetails.innerHTML = `<div class="reportItem">${error.message}</div>`;
@@ -2836,7 +2867,8 @@ promoToggleButton.addEventListener("click", () => {
   renderPromoBoard();
   if (promosOpen) window.setTimeout(() => storeListSearch?.focus(), 0);
 });
-reportToggleButton?.addEventListener("click", () => {
+reportToggleButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
   reportOpen = !reportOpen;
   if (reportOpen) clickReportOpen = false;
   renderRefreshReport(latestReportData || { sources: sourcePromos, scanned: allFinds.length, finds: allFinds });
@@ -2846,7 +2878,8 @@ reportDetailsButton?.addEventListener("click", () => {
   reportDetailsOpen = !reportDetailsOpen;
   renderRefreshReport(latestReportData || { sources: sourcePromos, scanned: allFinds.length, finds: allFinds });
 });
-clickReportToggleButton?.addEventListener("click", () => {
+clickReportToggleButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
   clickReportOpen = !clickReportOpen;
   if (clickReportOpen) {
     reportOpen = false;
@@ -2856,7 +2889,16 @@ clickReportToggleButton?.addEventListener("click", () => {
     renderClickReport();
   }
 });
-clickReportRefreshButton?.addEventListener("click", loadClickReport);
+clickReportRefreshButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  loadClickReport();
+});
+clickReport?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+refreshReport?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
 
 for (const [name, filter] of Object.entries(singleChoiceFilters)) {
   renderSingleChoiceList(name);

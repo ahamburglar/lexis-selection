@@ -656,9 +656,20 @@ const stores = [
     mode: "all-products",
   },
   {
+    source: "Shoppe Balloo",
+    baseUrl: "https://shoppeballoo.com",
+    mode: "all-products",
+  },
+  {
+    source: "Dearly",
+    baseUrl: "https://welovedearly.com",
+    mode: "all-products",
+  },
+  {
     source: "Jean + Hadley",
     baseUrl: "https://www.jeanandhadley.com",
-    mode: "all-products",
+    mode: "wix-sale-page",
+    salePath: "/sale",
   },
 ];
 
@@ -1249,7 +1260,7 @@ function productToFind(product, store, minDiscount) {
   const shoeProduct = isShoeProduct(product);
   const accessoryProduct = isAccessoryProduct(product);
 
-  const variants = (product.variants || [])
+  const allVariants = (product.variants || [])
     .map((variant) => {
       let sale = toMoney(variant.price);
       const original = toMoney(variant.compare_at_price);
@@ -1269,11 +1280,15 @@ function productToFind(product, store, minDiscount) {
       };
     })
     .filter((variant) => (
-      variant.available
-      && variant.discount !== null
+      variant.discount !== null
       && !isAbnormalVariantPrice(variant)
       && displayDiscount(variant.discount) >= minDiscount
       && (shoeProduct || accessoryProduct || adultProduct || !isAdultClothingSize(variant.size))
+    ));
+
+  const variants = allVariants
+    .filter((variant) => (
+      variant.available
     ));
 
   if (!variants.length) return null;
@@ -1501,6 +1516,178 @@ function htmlProduct({ id, title, vendor = "", productType = "", url = "", image
   };
 }
 
+function extractJsonArrayAfterMarker(text = "", marker = "") {
+  const start = text.indexOf(marker);
+  if (start < 0) return [];
+  const arrayStart = start + marker.length - 1;
+  let depth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (let index = arrayStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaping) escaping = false;
+      else if (char === "\\") escaping = true;
+      else if (char === "\"") inString = false;
+      continue;
+    }
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+    if (char === "[") depth += 1;
+    else if (char === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(arrayStart, index + 1));
+        } catch {
+          return [];
+        }
+      }
+    }
+  }
+  return [];
+}
+
+function extractJsonObjectAfterMarker(text = "", marker = "") {
+  const start = text.indexOf(marker);
+  if (start < 0) return null;
+  const objectStart = start + marker.length - 1;
+  let depth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (let index = objectStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaping) escaping = false;
+      else if (char === "\\") escaping = true;
+      else if (char === "\"") inString = false;
+      continue;
+    }
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(objectStart, index + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function wixProductSizeMap(product) {
+  const map = new Map();
+  for (const option of product.options || []) {
+    if (!/size/i.test(option.key || option.title || "")) continue;
+    for (const selection of option.selections || []) {
+      map.set(String(selection.id), selection.value || selection.description || selection.key || "");
+    }
+  }
+  return map;
+}
+
+function slugifyWixPath(value = "") {
+  return `/${normalizeBrandText(value).replace(/\s+/g, "-")}`;
+}
+
+function wixBrandPaths() {
+  const paths = new Set(["/sale"]);
+  for (const brand of brandList) {
+    paths.add(slugifyWixPath(brand.name));
+    for (const match of brand.matches || []) paths.add(slugifyWixPath(match));
+  }
+  return [...paths].filter((pathValue) => pathValue.length > 1);
+}
+
+function wixDiscountedVariants(product) {
+  const sizeMap = wixProductSizeMap(product);
+  return (product.productItems || [])
+    .filter((item) => (
+      item?.isVisible !== false
+      && item?.hasDiscount
+      && Number(item.comparePrice) > 0
+      && Number(item.price) > Number(item.comparePrice)
+      && (item.inventory?.status ? item.inventory.status === "in_stock" : true)
+    ))
+    .map((item) => {
+      const size = item.optionsSelections
+        ?.map((id) => sizeMap.get(String(id)))
+        .filter(Boolean)
+        .join(", ") || "One size";
+      const quantity = Number(item.inventory?.quantity);
+      const hasQuantity = Number.isFinite(quantity);
+      return {
+        title: size,
+        option1: size,
+        price: String(item.comparePrice),
+        compare_at_price: String(item.price),
+        available: hasQuantity ? quantity > 0 : true,
+      };
+    });
+}
+
+async function fetchWixPageProduct(store, listedProduct) {
+  const handle = listedProduct.urlPart || listedProduct.slug || listedProduct.id || "";
+  if (!handle) return listedProduct;
+  const url = absoluteUrl(store.baseUrl, `/product-page/${handle}`);
+  const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
+  if (!response.ok) return [];
+  const html = await response.text();
+  return extractJsonObjectAfterMarker(html, `"productPage_USD_${handle}":{"catalog":{"product":{`)
+    || extractJsonObjectAfterMarker(html, "\"catalog\":{\"product\":{")
+    || listedProduct;
+}
+
+async function fetchWixSalePageProducts(store, minDiscount = 0.4, { refreshMode = "quick" } = {}) {
+  const paths = refreshMode === "deep" ? wixBrandPaths() : [store.salePath || "/sale"];
+  const products = [];
+  const seenHandles = new Set();
+
+  for (const pathValue of paths) {
+    const response = await fetch(absoluteUrl(store.baseUrl, pathValue), { headers: { "user-agent": "Mozilla/5.0" } });
+    if (!response.ok) continue;
+    const html = await response.text();
+    const list = extractJsonArrayAfterMarker(html, "\"productsWithMetaData\":{\"list\":[");
+
+    for (const listedProduct of list) {
+      const handle = listedProduct.urlPart || listedProduct.id || listedProduct.name;
+      if (!handle || seenHandles.has(handle)) continue;
+      seenHandles.add(handle);
+
+      let product = listedProduct;
+      let variants = wixDiscountedVariants(product);
+      if (!variants.length && (!product.productItems || !product.productItems.length)) {
+        product = await fetchWixPageProduct(store, listedProduct);
+        variants = wixDiscountedVariants(product);
+      }
+      if (!variants.length) continue;
+      products.push({
+        id: product.id || listedProduct.id || handle,
+        title: product.name || listedProduct.name || "",
+        handle,
+        vendor: "",
+        product_type: "",
+        url: absoluteUrl(store.baseUrl, `/product-page/${handle}`),
+        images: product.media?.[0]?.fullUrl ? [{ src: product.media[0].fullUrl }] : [],
+        variants,
+      });
+    }
+  }
+
+  return products;
+}
+
 async function fetchEcwidHomepageProducts(store) {
   const response = await fetch(store.baseUrl, { headers: { "user-agent": "Mozilla/5.0" } });
   if (!response.ok) return [];
@@ -1572,6 +1759,7 @@ async function fetchLightspeedHomepageProducts(store) {
 async function fetchStoreProducts(store, minDiscount = 0.4, { refreshMode = "quick" } = {}) {
   if (store.mode === "childrensalon-sale") return fetchChildrensalonProducts(store);
   if (store.mode === "smallable-sale") return fetchSmallableProducts(store);
+  if (store.mode === "wix-sale-page") return fetchWixSalePageProducts(store, minDiscount, { refreshMode });
   if (store.mode === "ecwid-homepage") return fetchEcwidHomepageProducts(store);
   if (store.mode === "lightspeed-homepage") return fetchLightspeedHomepageProducts(store);
   return fetchShopifyProducts(store, minDiscount, { refreshMode });
