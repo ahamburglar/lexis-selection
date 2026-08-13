@@ -804,6 +804,9 @@ function isExcludedBrandProduct(product) {
 }
 
 function detectProductBrand(product) {
+  const vendorBrand = normalizeBrand(product.vendor);
+  if (targetBrands.has(vendorBrand)) return vendorBrand;
+
   const productText = productBrandSearchText(product);
   const candidates = brandList
     .flatMap((brand) => (brand.matches || [brand.name]).map((match) => ({ brand: brand.name, match: normalizeBrandText(match) })))
@@ -813,9 +816,6 @@ function detectProductBrand(product) {
   for (const { brand, match } of candidates) {
     if (productText === match || productText.startsWith(`${match} `) || productText.includes(` ${match} `)) return brand;
   }
-
-  const vendorBrand = normalizeBrand(product.vendor);
-  if (targetBrands.has(vendorBrand)) return vendorBrand;
 
   return vendorBrand;
 }
