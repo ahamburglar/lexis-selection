@@ -800,6 +800,27 @@ input {
   text-transform: uppercase;
 }
 
+.brandOption::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid #98a39d;
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.brandOption.selected::before {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--panel);
+}
+
+.brandOption > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .brandTag {
   flex: 0 0 auto;
   border-radius: 999px;

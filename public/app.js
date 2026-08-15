@@ -298,6 +298,10 @@ const trustedStoreSources = new Set([
   "Coucou Kids",
   "Marigold Modern",
   "Mini Dreamers",
+  "Ellou",
+  "Milomoo Baby",
+  "Buttons Bebe",
+  "Broomtail Kids",
 ]);
 const storeHomeUrls = new Map([
   ["Tiptoe Boutique", "https://tiptoeboutique.com"],
@@ -1641,6 +1645,24 @@ function updateBrandPanel() {
     : `${selected.slice(0, 3).join(", ")} +${selected.length - 3} more`;
 }
 
+function updateBrandDirectorySelection() {
+  brandList.querySelectorAll(".brandOption").forEach((button) => {
+    button.classList.toggle("selected", selectedBrands.has(button.dataset.brand));
+  });
+  brandList.querySelectorAll(".brandStyleButton").forEach((button) => {
+    const collectionBrands = (button.dataset.brands || "").split("\n").filter(Boolean);
+    button.classList.toggle("active", collectionBrands.length > 0 && collectionBrands.every((brand) => selectedBrands.has(brand)));
+  });
+  const allButton = brandList.querySelector(".brandAllButton");
+  if (allButton) allButton.classList.toggle("active", !selectedBrands.size);
+}
+
+function applyBrandSelectionChange() {
+  updateBrandPanel();
+  updateBrandDirectorySelection();
+  render();
+}
+
 function toggleBrandPanel() {
   const nextOpen = !brandsOpen;
   brandsOpen = nextOpen;
@@ -1668,6 +1690,27 @@ function updateSourcePanel() {
   sourceSummary.textContent = selected.length === 1
     ? selected[0]
     : `${selected[0]} +${selected.length - 1} more`;
+}
+
+function updateSourceListSelection() {
+  sourceList.querySelectorAll(".sourceOption").forEach((button) => {
+    button.classList.toggle("selected", selectedSources.has(button.dataset.source));
+  });
+  sourceList.querySelectorAll(".sourceQuickButton").forEach((button) => {
+    if (button.dataset.action === "all") {
+      button.classList.toggle("active", !selectedSources.size);
+      return;
+    }
+    const groupSources = (button.dataset.sources || "").split("\n").filter(Boolean);
+    button.classList.toggle("active", groupSources.length > 0 && groupSources.every((source) => selectedSources.has(source)));
+  });
+}
+
+function applySourceSelectionChange() {
+  updateSourcePanel();
+  updateSourceListSelection();
+  updateAdminControls();
+  render();
 }
 
 function toggleSourcePanel() {
@@ -1907,6 +1950,7 @@ function renderBrandDirectory(brands) {
       const allSelected = collection.brands.every((brand) => selectedBrands.has(brand));
       button.type = "button";
       button.className = allSelected ? "brandStyleButton active" : "brandStyleButton";
+      button.dataset.brands = collection.brands.join("\n");
       button.textContent = collection.label;
       count.className = "brandStyleCount";
       count.textContent = String(collection.brands.length);
@@ -1916,9 +1960,13 @@ function renderBrandDirectory(brands) {
           title: collection.label,
           brand: collection.brands.join(", "),
         });
-        selectedBrands = new Set(collection.brands);
-        populateFilters(allFinds);
-        render();
+        const currentlyAllSelected = collection.brands.every((brand) => selectedBrands.has(brand));
+        if (currentlyAllSelected) {
+          for (const brand of collection.brands) selectedBrands.delete(brand);
+        } else {
+          for (const brand of collection.brands) selectedBrands.add(brand);
+        }
+        applyBrandSelectionChange();
       });
       styleSection.append(button);
     }
@@ -1933,12 +1981,11 @@ function renderBrandDirectory(brands) {
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.textContent = "ALL";
-  allButton.className = selectedBrands.size ? "" : "active";
+  allButton.className = selectedBrands.size ? "brandAllButton" : "brandAllButton active";
   allButton.addEventListener("click", () => {
     trackClick("brand_filter_clear_click");
     selectedBrands.clear();
-    populateFilters(allFinds);
-    render();
+    applyBrandSelectionChange();
   });
   letterNav.append(allButton);
 
@@ -1983,19 +2030,16 @@ function renderBrandDirectory(brands) {
     for (const brand of sectionBrands) {
       const button = document.createElement("button");
       const name = document.createElement("span");
-      const tag = document.createElement("span");
       button.type = "button";
       button.className = selectedBrands.has(brand) ? "brandOption selected" : "brandOption";
+      button.dataset.brand = brand;
       name.textContent = brand;
-      tag.className = `brandTag ${brandTypes.get(brand) || "clothes"}`;
-      tag.textContent = brandTypes.get(brand) || "clothes";
-      button.append(name, tag);
+      button.append(name);
       button.addEventListener("click", () => {
         trackClick("brand_filter_click", null, { brand });
         if (selectedBrands.has(brand)) selectedBrands.delete(brand);
         else selectedBrands.add(brand);
-        populateFilters(allFinds);
-        render();
+        applyBrandSelectionChange();
       });
       names.append(button);
     }
@@ -2035,30 +2079,41 @@ function renderSourceList(sources) {
   const quickActions = document.createElement("div");
   quickActions.className = "sourceQuickActions";
 
-  const makeQuickButton = (label, action, active = false) => {
+  const makeQuickButton = (label, action, active = false, sourcesForButton = []) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = active ? "sourceQuickButton active" : "sourceQuickButton";
     button.textContent = label;
+    button.dataset.sources = sourcesForButton.join("\n");
     button.addEventListener("click", action);
     quickActions.append(button);
   };
 
-  const selectMatchingSources = (wanted) => {
-    selectedSources = new Set(wanted.filter((source) => sources.includes(source)));
-    populateFilters(allFinds);
-    render();
+  const toggleMatchingSources = (wanted) => {
+    const matchingSources = wanted.filter((source) => sources.includes(source));
+    const currentlyAllSelected = matchingSources.length > 0 && matchingSources.every((source) => selectedSources.has(source));
+    if (currentlyAllSelected) {
+      for (const source of matchingSources) selectedSources.delete(source);
+    } else {
+      for (const source of matchingSources) selectedSources.add(source);
+    }
+    applySourceSelectionChange();
   };
 
+  const sourceGroupActive = (wanted) => {
+    const matchingSources = wanted.filter((source) => sources.includes(source));
+    return matchingSources.length > 0 && matchingSources.every((source) => selectedSources.has(source));
+  };
+
+  const allButtonActive = !selectedSources.size;
   makeQuickButton("All", () => {
     selectedSources.clear();
-    populateFilters(allFinds);
-    render();
-  }, !selectedSources.size);
-  makeQuickButton("Trusted", () => selectMatchingSources([...trustedStoreSources]));
-  makeQuickButton("Usuals", () => selectMatchingSources(usualSources));
-  makeQuickButton("New stores", () => selectMatchingSources(newlyAddedSources));
-  makeQuickButton("Big stores", () => selectMatchingSources(bigStoreSources));
+    applySourceSelectionChange();
+  }, allButtonActive);
+  quickActions.lastElementChild.dataset.action = "all";
+  makeQuickButton("Trusted", () => toggleMatchingSources([...trustedStoreSources]), sourceGroupActive([...trustedStoreSources]), [...trustedStoreSources]);
+  makeQuickButton("Usuals", () => toggleMatchingSources(usualSources), sourceGroupActive(usualSources), usualSources);
+  makeQuickButton("New stores", () => toggleMatchingSources(newlyAddedSources), sourceGroupActive(newlyAddedSources), newlyAddedSources);
 
   sourceList.append(quickActions);
 
@@ -2086,6 +2141,7 @@ function renderSourceList(sources) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = selectedSources.has(source) ? "sourceOption selected" : "sourceOption";
+    button.dataset.source = source;
     const checkbox = document.createElement("span");
     const label = document.createElement("span");
     label.className = "sourceOptionLabel";
@@ -2103,9 +2159,7 @@ function renderSourceList(sources) {
       trackClick("source_filter_click", null, { source });
       if (selectedSources.has(source)) selectedSources.delete(source);
       else selectedSources.add(source);
-      populateFilters(allFinds);
-      updateAdminControls();
-      render();
+      applySourceSelectionChange();
     });
     grid.append(button);
   }
