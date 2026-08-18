@@ -278,9 +278,11 @@ const newlyAddedSources = [
   "All The Little Bows",
   "Cocoleto",
   "English Rabbit",
+  "The Spotted Goose",
   "ATLR Paris",
   "The Little Being",
   "Jean + Hadley",
+  "SK Boutique",
 ];
 const trustedStoreSources = new Set([
   "Buttons and Bows NY",
@@ -419,9 +421,11 @@ const storeHomeUrls = new Map([
   ["All The Little Bows", "https://allthelittlebows.com"],
   ["Cocoleto", "https://cocoleto.com"],
   ["English Rabbit", "https://englishrabbit.com"],
+  ["The Spotted Goose", "https://www.thespottedgoose.com"],
   ["ATLR Paris", "https://atlrparis.com"],
   ["The Little Being", "https://thelittlebeing.com"],
   ["Jean + Hadley", "https://www.jeanandhadley.com"],
+  ["SK Boutique", "https://shopskboutique.com"],
 ]);
 
 const storeInstagramUrls = new Map([
@@ -523,11 +527,13 @@ const storeInstagramUrls = new Map([
   ["All The Little Bows", "https://www.instagram.com/allthelittlebows/"],
   ["Cocoleto", "https://www.instagram.com/shopcocoleto/"],
   ["English Rabbit", "https://www.instagram.com/englishrabbit/"],
+  ["The Spotted Goose", "https://www.instagram.com/thespottedgoose/"],
   ["ATLR Paris", "https://www.instagram.com/atlr.paris/"],
   ["The Little Being", "https://www.instagram.com/thelittlebeingshop/"],
   ["Shoppe Balloo", "https://www.instagram.com/shoppe.balloo/"],
   ["Dearly", "https://www.instagram.com/welovedearly/"],
   ["Jean + Hadley", "https://www.instagram.com/jeanandhadley_official/"],
+  ["SK Boutique", "https://www.instagram.com/shop.sk.boutique/"],
   ["Murray & Finn", "https://www.instagram.com/murrayandfinn/"],
   ["Buttons Bebe", "https://www.instagram.com/buttonsbebe/"],
   ["Les Mini", "https://www.instagram.com/shoplesmini/"],

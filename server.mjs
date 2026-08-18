@@ -646,6 +646,11 @@ const stores = [
     mode: "all-products",
   },
   {
+    source: "The Spotted Goose",
+    baseUrl: "https://www.thespottedgoose.com",
+    mode: "all-products",
+  },
+  {
     source: "ATLR Paris",
     baseUrl: "https://atlrparis.com",
     mode: "all-products",
@@ -672,6 +677,11 @@ const stores = [
     baseUrl: "https://www.jeanandhadley.com",
     mode: "wix-sale-page",
     salePath: "/sale",
+  },
+  {
+    source: "SK Boutique",
+    baseUrl: "https://shopskboutique.com",
+    mode: "all-products",
   },
 ];
 

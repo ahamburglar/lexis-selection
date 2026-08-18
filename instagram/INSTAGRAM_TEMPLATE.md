@@ -36,6 +36,18 @@ Reference hierarchy:
 - Everything informational: Avenir Next.
 - No more than these two font families in one carousel.
 
+Locked sizes for the main sale-note style:
+
+- Header “Lexi’s Selection”: Avenir Next Demi Bold Italic, 28–32 px.
+- Header subtitle: Avenir Next Demi Bold, 20–24 px, spaced caps.
+- Small label `S A L E   N O T E`: Avenir Next Demi Bold Italic, 26–30 px, spaced caps.
+- Main title line 1 / 2: Didot regular, 104–120 px.
+- Main discount line: Didot regular, 78–88 px, terracotta.
+- Supporting serif line: Didot regular, 50–64 px.
+- Footer note: Avenir Next Demi Bold, 22–26 px.
+
+Do not resize these differently between posts unless the text would otherwise overflow. If text is long, reduce by at most 8 px first, then split into two lines; do not switch fonts.
+
 ## Fixed header
 
 Use on every designed slide:
