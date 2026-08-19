@@ -2645,12 +2645,20 @@ function render() {
     const storeLink = node.querySelector(".storeLink");
     storeLink.textContent = find.source;
     storeLink.title = `Show ${find.source}`;
+    const storeLine = storeLink.closest(".storeLine");
+    if (trustedStoreSources.has(find.source)) {
+      const trustedBadge = document.createElement("span");
+      trustedBadge.className = "trustedStoreBadge";
+      trustedBadge.textContent = "✓";
+      trustedBadge.title = "Lexi has ordered here";
+      storeLine.append(trustedBadge);
+    }
     if (cautionStoreSources.has(find.source)) {
       const cautionBadge = document.createElement("span");
       cautionBadge.className = "cautionStoreBadge";
-      cautionBadge.textContent = "Shipping risk";
+      cautionBadge.textContent = "Risk";
       cautionBadge.title = "Multiple shoppers reported shipping issues";
-      storeLink.after(cautionBadge);
+      storeLine.append(cautionBadge);
     }
     storeLink.addEventListener("click", () => {
       trackClick("store_chip_click", find, { source: find.source });
