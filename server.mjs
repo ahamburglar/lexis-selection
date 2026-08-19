@@ -683,6 +683,11 @@ const stores = [
     baseUrl: "https://shopskboutique.com",
     mode: "all-products",
   },
+  {
+    source: "Thistle and Wren",
+    baseUrl: "https://www.thistleandwren.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;

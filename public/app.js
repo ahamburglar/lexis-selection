@@ -283,6 +283,7 @@ const newlyAddedSources = [
   "The Little Being",
   "Jean + Hadley",
   "SK Boutique",
+  "Thistle and Wren",
 ];
 const trustedStoreSources = new Set([
   "Buttons and Bows NY",
@@ -304,6 +305,9 @@ const trustedStoreSources = new Set([
   "Milomoo Baby",
   "Buttons Bebe",
   "Broomtail Kids",
+]);
+const cautionStoreSources = new Set([
+  "Wee Mondine",
 ]);
 const storeHomeUrls = new Map([
   ["Tiptoe Boutique", "https://tiptoeboutique.com"],
@@ -426,6 +430,7 @@ const storeHomeUrls = new Map([
   ["The Little Being", "https://thelittlebeing.com"],
   ["Jean + Hadley", "https://www.jeanandhadley.com"],
   ["SK Boutique", "https://shopskboutique.com"],
+  ["Thistle and Wren", "https://www.thistleandwren.com"],
 ]);
 
 const storeInstagramUrls = new Map([
@@ -547,6 +552,7 @@ const storeInstagramUrls = new Map([
   ["The Red Balloon Co.", "https://www.instagram.com/theredballoonco/"],
   ["Whoopi Kids", "https://www.instagram.com/whoopikids/"],
   ["Willkie's", "https://www.instagram.com/shopwillkies/"],
+  ["Thistle and Wren", "https://www.instagram.com/thistleandwren/"],
 ]);
 
 function createInstagramLink(sourceName) {
@@ -583,6 +589,8 @@ function promoSortRank(item) {
 function sortPromos(a, b) {
   const trustedDiff = Number(trustedStoreSources.has(b.source)) - Number(trustedStoreSources.has(a.source));
   if (trustedDiff) return trustedDiff;
+  const cautionDiff = Number(cautionStoreSources.has(a.source)) - Number(cautionStoreSources.has(b.source));
+  if (cautionDiff) return cautionDiff;
   const rankA = promoSortRank(a);
   const rankB = promoSortRank(b);
   return rankA.group - rankB.group
@@ -2118,6 +2126,7 @@ function renderSourceList(sources) {
   }, allButtonActive);
   quickActions.lastElementChild.dataset.action = "all";
   makeQuickButton("Trusted", () => toggleMatchingSources([...trustedStoreSources]), sourceGroupActive([...trustedStoreSources]), [...trustedStoreSources]);
+  makeQuickButton("Caution", () => toggleMatchingSources([...cautionStoreSources]), sourceGroupActive([...cautionStoreSources]), [...cautionStoreSources]);
   makeQuickButton("Usuals", () => toggleMatchingSources(usualSources), sourceGroupActive(usualSources), usualSources);
   makeQuickButton("New stores", () => toggleMatchingSources(newlyAddedSources), sourceGroupActive(newlyAddedSources), newlyAddedSources);
 
@@ -2129,7 +2138,8 @@ function renderSourceList(sources) {
     .sort((a, b) => {
       const selectedDiff = Number(selectedSources.has(b)) - Number(selectedSources.has(a));
       const trustedDiff = Number(trustedStoreSources.has(b)) - Number(trustedStoreSources.has(a));
-      return selectedDiff || trustedDiff || a.localeCompare(b);
+      const cautionDiff = Number(cautionStoreSources.has(a)) - Number(cautionStoreSources.has(b));
+      return selectedDiff || trustedDiff || cautionDiff || a.localeCompare(b);
     });
 
   const grid = document.createElement("div");
@@ -2158,6 +2168,13 @@ function renderSourceList(sources) {
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
       badge.title = "Lexi has ordered here";
+      label.append(document.createTextNode(" "), badge);
+    }
+    if (cautionStoreSources.has(source)) {
+      const badge = document.createElement("span");
+      badge.className = "cautionStoreBadge";
+      badge.textContent = "Shipping risk";
+      badge.title = "Multiple shoppers reported shipping issues";
       label.append(document.createTextNode(" "), badge);
     }
     button.append(checkbox, label);
@@ -2235,6 +2252,13 @@ function renderPromoBoard() {
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
       badge.title = "Lexi has ordered here";
+      source.append(document.createTextNode(" "), badge);
+    }
+    if (cautionStoreSources.has(item.source)) {
+      const badge = document.createElement("span");
+      badge.className = "cautionStoreBadge";
+      badge.textContent = "Shipping risk";
+      badge.title = "Multiple shoppers reported shipping issues";
       source.append(document.createTextNode(" "), badge);
     }
     const instagramLink = createInstagramLink(item.source);
@@ -2621,6 +2645,13 @@ function render() {
     const storeLink = node.querySelector(".storeLink");
     storeLink.textContent = find.source;
     storeLink.title = `Show ${find.source}`;
+    if (cautionStoreSources.has(find.source)) {
+      const cautionBadge = document.createElement("span");
+      cautionBadge.className = "cautionStoreBadge";
+      cautionBadge.textContent = "Shipping risk";
+      cautionBadge.title = "Multiple shoppers reported shipping issues";
+      storeLink.after(cautionBadge);
+    }
     storeLink.addEventListener("click", () => {
       trackClick("store_chip_click", find, { source: find.source });
       womenOnly = false;
