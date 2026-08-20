@@ -305,6 +305,7 @@ const trustedStoreSources = new Set([
   "Milomoo Baby",
   "Buttons Bebe",
   "Broomtail Kids",
+  "Hello Alyss",
 ]);
 const cautionStoreSources = new Set([
   "Wee Mondine",
