@@ -82,11 +82,12 @@ let refreshBackupData = null;
 let latestCompleteData = null;
 let shuffleSeed = Math.random();
 const adminRefreshTokenKey = "lexiMomAdminRefreshToken";
-const favoriteBrands = ["Billieblush", "Floss", "Wynken", "Emile et Ida"];
+const favoriteBrands = ["Emile et Ida", "Floss", "Louise Misha"];
+const trustedStoreTooltip = "Trusted means Lexi’s mom or her close friends have ordered from this store.";
 const brandStyleCollections = [
   {
     id: "my-picks",
-    label: "My picks",
+    label: "My picks ♥",
     brands: favoriteBrands,
   },
   {
@@ -306,6 +307,9 @@ const trustedStoreSources = new Set([
   "Buttons Bebe",
   "Broomtail Kids",
   "Hello Alyss",
+  "Whoopi Kids",
+  "Ele Ella",
+  "ATLR Paris",
 ]);
 const cautionStoreSources = new Set([
   "Wee Mondine",
@@ -606,6 +610,13 @@ function displayPromoNote(value = "", source = "") {
     .replace(/^\s*d\s+([$£€]\s*\d+(?:\.\d+)?)\s+more\s+and\s+get\s+free\s+shipping!?/i, "Spend $1 more and get free shipping")
     .trim();
   if (!note) return "";
+  if (source === "Hooray Shoppe"
+    && /\bquincy\s+mae\s+halloween\s+sale\b/i.test(note)
+    && /\$10\s*&\s*under/i.test(note)
+    && /\$15\s+sale/i.test(note)
+    && /\b40%\s*off\b/i.test(note)) {
+    return "$10 & under · $15 sale · 40% off sale";
+  }
   if (/\b(?:please enter a valid code|apply code|discount code\.js|social link|assets\/|sold out|in stock|shipping dis)\b/i.test(note)) {
     note = note
       .replace(/\b(?:please enter a valid code|apply code|promo code|discount code\.js|social link|assets\/remove|sold out|in stock|shipping dis|save\s*%\s*save\s*up\s*to\s*save)\b/gi, " ")
@@ -2168,7 +2179,7 @@ function renderSourceList(sources) {
       const badge = document.createElement("span");
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
-      badge.title = "Lexi has ordered here";
+      badge.title = trustedStoreTooltip;
       label.append(document.createTextNode(" "), badge);
     }
     if (cautionStoreSources.has(source)) {
@@ -2252,7 +2263,7 @@ function renderPromoBoard() {
       const badge = document.createElement("span");
       badge.className = "trustedStoreBadge";
       badge.textContent = "Trusted";
-      badge.title = "Lexi has ordered here";
+      badge.title = trustedStoreTooltip;
       source.append(document.createTextNode(" "), badge);
     }
     if (cautionStoreSources.has(item.source)) {
@@ -2651,7 +2662,7 @@ function render() {
       const trustedBadge = document.createElement("span");
       trustedBadge.className = "trustedStoreBadge";
       trustedBadge.textContent = "✓";
-      trustedBadge.title = "Lexi has ordered here";
+      trustedBadge.title = trustedStoreTooltip;
       storeLine.append(trustedBadge);
     }
     if (cautionStoreSources.has(find.source)) {

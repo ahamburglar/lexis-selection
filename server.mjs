@@ -993,6 +993,13 @@ function sanitizeStorePromoNote(storeOrSource, value = "") {
   const note = sanitizePromoNote(value);
   const source = typeof storeOrSource === "string" ? storeOrSource : storeOrSource?.source;
   if (!note) return "";
+  if (source === "Hooray Shoppe"
+    && /\bquincy\s+mae\s+halloween\s+sale\b/i.test(value)
+    && /\$10\s*&\s*under/i.test(value)
+    && /\$15\s+sale/i.test(value)
+    && /\b40%\s*off\b/i.test(value)) {
+    return "$10 & under · $15 sale · 40% off sale";
+  }
   if (source !== "South Coast Baby Co") return note;
 
   const concreteStorePromo = /\bfree\s+(?:u\.?s\.?a?\.?\s+|us\s+)?shipping\b[^.!?]{0,100}(?:[$£€]?\s*\d+(?:\.\d+)?\+?|orders?|over|above|minimum|min)|\b[$£€]?\s*\d+(?:\.\d+)?\s+away\s+from\s+free\s+shipping\b|\b(?:use\s+code|with\s+code|promo\s+code|code)\s*[:\-]?\s*[A-Z0-9]{3,20}\b|\b(?:buy|get)\s+\d+[^.!?]{0,80}\b(?:off|free|sale|discount)\b|\b(?:up\s+to|take|save|get|extra|additional|sale)\s+\d{1,2}%\s*off\b|\b\d{1,2}%\s*off\b/i;
