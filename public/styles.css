@@ -578,6 +578,25 @@ input {
   min-height: 36px;
 }
 
+.sizeGroup {
+  border-top: 1px solid var(--line);
+  padding: 9px 10px 10px;
+}
+
+.sizeGroupLabel {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#sizeList .sizeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+}
+
 .sourceList[hidden] {
   display: none;
 }

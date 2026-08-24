@@ -649,5 +649,11 @@
     "matches": ["rockahula kids", "rockahula"],
     "collections": ["rockahula-kids", "rockahula"],
     "type": "accessories"
+  },
+  {
+    "name": "Il Gufo",
+    "matches": ["il gufo"],
+    "collections": ["il-gufo"],
+    "type": "clothes"
   }
 ]

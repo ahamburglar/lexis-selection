@@ -187,6 +187,7 @@ const brandStyleCollections = [
       "Maison Pimpim",
       "Tartine et Chocolat",
       "Lola + The Boys",
+      "Il Gufo",
     ],
   },
   {
@@ -934,6 +935,15 @@ const singleChoiceFilters = {
 };
 let openChoiceFilter = "";
 
+const sizeFilterGroups = [
+  { value: "baby", label: "Baby" },
+  { value: "toddler", label: "Toddler" },
+  { value: "kids", label: "Kids" },
+  { value: "big-kids", label: "Big kids" },
+  { value: "women", label: "Women" },
+  { value: "shoes", label: "Shoes" },
+];
+
 function money(value, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
 }
@@ -1398,13 +1408,14 @@ function visibleChoiceOptions(name) {
     return filter.options.filter((option) => option.value === "");
   }
   if (name !== "size") return filter.options;
-  const ageFit = choiceValue("ageFit");
-  if (!ageFit) return filter.options;
-  return filter.options.filter((option) => {
-    if (option.value === "") return true;
-    if (option.ageFits) return option.ageFits.includes(ageFit);
-    return ageFit === "kids";
-  });
+  return filter.options;
+}
+
+function sizeFilterAgeFit(filter = "") {
+  if (!filter) return "";
+  const option = singleChoiceFilters.size.options.find((item) => item.value === filter);
+  const ageFits = option?.ageFits?.filter(Boolean) || [];
+  return ageFits.length === 1 ? ageFits[0] : "";
 }
 
 function defaultSizeForAgeFit(ageFit) {
@@ -1501,13 +1512,18 @@ function selectedShoeSizeMatches(size, find, filter = "") {
 }
 
 function sizeMatches(size, filter, find) {
-  const ageFit = choiceValue("ageFit");
+  const selectedAgeFit = choiceValue("ageFit");
+  const filterAgeFit = sizeFilterAgeFit(filter);
+  const ageFit = filterAgeFit || selectedAgeFit;
   const isShoe = isShoeFind(find);
   const isAccessory = isAccessoryFind(find);
   const years = yearsFromSize(size);
   const toddlerYears = toddlerYearsFromSize(size);
   const months = monthRangeFromSize(size);
 
+  if (filterAgeFit === "shoes" && !isShoe) return false;
+  if (filterAgeFit && filterAgeFit !== "shoes" && isShoe) return false;
+  if (filterAgeFit && isAccessory) return false;
   if (isAccessory) return ageFit === "accessories" || (!ageFit && !filter);
   if (isShoe) return (ageFit === "shoes" || (!ageFit && (!filter || String(filter).includes("shoe")))) && selectedShoeSizeMatches(size, find, filter);
 
@@ -1575,9 +1591,10 @@ function sizeMatches(size, filter, find) {
       || numbers.some((value) => value >= 44);
   }
   if (ageFit === "women") return isAdultClothingSize(size);
+  if (!ageFit && !filter) return true;
   if (!filter) return true;
   if (filter === "3-6") return years.some((year) => year >= 3 && year <= 6);
-  return true;
+  return false;
 }
 
 function sizeSortValue(size, find) {
@@ -1754,6 +1771,10 @@ function toggleSourcePanel() {
 function renderSingleChoiceList(name) {
   const filter = singleChoiceFilters[name];
   filter.list.innerHTML = "";
+  if (name === "size") {
+    renderSizeChoiceList(filter);
+    return;
+  }
   const multiSelected = name === "size" ? selectedSizes : (name === "gender" ? selectedGenders : null);
   if (multiSelected) {
     if (multiSelected.size) {
@@ -1843,6 +1864,100 @@ function renderSingleChoiceList(name) {
       render();
     });
     filter.list.append(button);
+  }
+}
+
+function sizeOptionsForGroup(groupValue) {
+  return singleChoiceFilters.size.options.filter((option) => (
+    option.value && option.ageFits?.includes(groupValue)
+  ));
+}
+
+function renderSizeChoiceList(filter) {
+  const quickActions = document.createElement("div");
+  quickActions.className = "sourceQuickActions";
+
+  const makeQuickButton = (label, action, active = false) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = active ? "sourceQuickButton active" : "sourceQuickButton";
+    button.textContent = label;
+    button.addEventListener("click", action);
+    quickActions.append(button);
+  };
+
+  makeQuickButton("Any size", () => {
+    selectedSizes.clear();
+    updateSingleChoicePanels();
+    render();
+  }, !selectedSizes.size);
+
+  for (const group of sizeFilterGroups) {
+    const values = sizeOptionsForGroup(group.value).map((option) => option.value);
+    if (!values.length) continue;
+    const active = values.every((value) => selectedSizes.has(value));
+    makeQuickButton(group.label, () => {
+      trackClick("size_group_filter_click", null, {
+        title: group.label,
+        sizeGroup: group.value,
+      });
+      if (active) {
+        for (const value of values) selectedSizes.delete(value);
+      } else {
+        for (const value of values) selectedSizes.add(value);
+      }
+      updateSingleChoicePanels();
+      render();
+    }, active);
+  }
+
+  filter.list.append(quickActions);
+
+  for (const group of sizeFilterGroups) {
+    const options = sizeOptionsForGroup(group.value);
+    if (!options.length) continue;
+
+    const section = document.createElement("div");
+    section.className = "sizeGroup";
+
+    const label = document.createElement("div");
+    label.className = "sizeGroupLabel";
+    label.textContent = group.label;
+    section.append(label);
+
+    const grid = document.createElement("div");
+    grid.className = "sourceGrid sizeGrid";
+
+    for (const option of options) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = selectedSizes.has(option.value) ? "sourceOption selected" : "sourceOption";
+
+      const checkbox = document.createElement("span");
+      checkbox.className = "sourceCheck";
+      const optionLabel = document.createElement("span");
+      optionLabel.className = "sourceOptionLabel";
+      optionLabel.textContent = option.label;
+
+      button.append(checkbox, optionLabel);
+      button.addEventListener("click", () => {
+        trackClick("size_filter_click", null, {
+          title: option.label,
+          size: option.value,
+        });
+        if (selectedSizes.has(option.value)) {
+          selectedSizes.delete(option.value);
+        } else {
+          selectedSizes.add(option.value);
+        }
+        updateSingleChoicePanels();
+        render();
+      });
+      grid.append(button);
+    }
+
+    section.append(grid);
+    filter.list.append(section);
   }
 }
 
