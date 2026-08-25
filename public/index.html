@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png?v=7" />
     <link rel="shortcut icon" href="/favicon.png?v=7" />
     <link rel="apple-touch-icon" href="/favicon.png?v=7" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260824-filter-fix" />
   </head>
   <body>
     <header class="topbar">
@@ -124,7 +124,7 @@
           </button>
           <div id="discountList" class="sourceList choiceList" aria-label="Discount" hidden></div>
         </div>
-        <div class="filterGroup choiceFilter singleChoiceFilter">
+        <div class="filterGroup choiceFilter singleChoiceFilter stateOnlyFilter" hidden>
           <div class="filterHead"><span>Type</span></div>
           <button id="typeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
             <strong id="typeSummary" class="choiceSummary">All items</strong>
@@ -132,7 +132,7 @@
           </button>
           <div id="typeList" class="sourceList choiceList" aria-label="Type" hidden></div>
         </div>
-        <div class="filterGroup choiceFilter singleChoiceFilter">
+        <div class="filterGroup choiceFilter singleChoiceFilter stateOnlyFilter" hidden>
           <div class="filterHead"><span>Age / Fit</span></div>
           <button id="ageFitToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
             <strong id="ageFitSummary" class="choiceSummary">Kids</strong>
@@ -149,12 +149,17 @@
           <div id="genderList" class="sourceList choiceList" aria-label="Gender" hidden></div>
         </div>
         <div class="filterGroup choiceFilter singleChoiceFilter">
-          <div class="filterHead"><span>Size</span></div>
+          <div class="filterHead">
+            <span>Category / Size</span>
+            <div class="filterActions">
+              <button id="clearSizesButton" class="ghostButton" type="button" hidden>Clear</button>
+            </div>
+          </div>
           <button id="sizeToggleArea" class="choiceToggleArea" type="button" aria-expanded="false">
             <strong id="sizeSummary" class="choiceSummary">3Y-6Y</strong>
             <span id="toggleSizeButton" class="choiceHint">Choose</span>
           </button>
-          <div id="sizeList" class="sourceList choiceList" aria-label="Size" hidden></div>
+          <div id="sizeList" class="sourceList choiceList" aria-label="Category / Size" hidden></div>
         </div>
         <div class="searchFilter">
           <button id="toggleSearchButton" class="iconButton" type="button" aria-label="Search products" aria-expanded="false"></button>
@@ -170,7 +175,7 @@
       <section class="status">
         <div class="statusLeft">
           <span><strong id="count">--</strong><span> matches</span></span>
-          <button id="age3To6Button" class="ghostButton statusButton" type="button">3Y–6Y</button>
+          <button id="age3To6Button" class="ghostButton statusButton" type="button" hidden>3Y–6Y</button>
           <button id="womenOnlyButton" class="ghostButton statusButton" type="button" hidden>Women only</button>
           <button id="newOnlyButton" class="ghostButton statusButton" type="button" hidden>New only</button>
           <button id="priceDropsButton" class="ghostButton statusButton" type="button" hidden>Price drops</button>
@@ -226,6 +231,6 @@
       <p>Contact: <a href="mailto:lexiselection@gmail.com">lexiselection@gmail.com</a></p>
     </footer>
 
-    <script src="/app.js"></script>
+    <script src="/app.js?v=20260824-filter-fix"></script>
   </body>
 </html>

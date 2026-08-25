@@ -13,6 +13,7 @@ const sourceToggleArea = document.querySelector("#sourceToggleArea");
 const sourceSummary = document.querySelector("#sourceSummary");
 const toggleSourcesButton = document.querySelector("#toggleSourcesButton");
 const clearSourcesButton = document.querySelector("#clearSourcesButton");
+const clearSizesButton = document.querySelector("#clearSizesButton");
 const adminUnlockButton = document.querySelector("#adminUnlockButton");
 const refreshButton = document.querySelector("#refreshButton");
 const deepRefreshButton = document.querySelector("#deepRefreshButton");
@@ -62,6 +63,7 @@ let sourceHomeUrls = new Map();
 let selectedBrands = new Set();
 let selectedSources = new Set();
 let selectedSizes = new Set();
+let selectedAgeFits = new Set();
 let selectedGenders = new Set();
 let brandsOpen = false;
 let sourcesOpen = false;
@@ -680,6 +682,7 @@ function activeFilterSnapshot() {
     discount: choiceValue("discount"),
     type: choiceValue("type"),
     ageFit: choiceValue("ageFit"),
+    ageFits: [...selectedAgeFits],
     genders: [...selectedGenders],
     sizes: [...selectedSizes],
     womenOnly,
@@ -933,6 +936,7 @@ const singleChoiceFilters = {
     list: document.querySelector("#sizeList"),
   },
 };
+const visibleSingleChoiceFilterNames = ["sort", "discount", "gender", "size"];
 let openChoiceFilter = "";
 
 const sizeFilterGroups = [
@@ -943,6 +947,105 @@ const sizeFilterGroups = [
   { value: "women", label: "Women" },
   { value: "shoes", label: "Shoes" },
 ];
+const quick3To6SizeValues = ["3y", "4y", "5y", "6y"];
+const categoryAgeFitValues = new Set(["baby", "toddler", "kids", "big-kids", "women"]);
+const categoryTypeLabels = {
+  clothes: "Clothes",
+  shoes: "Shoes",
+  accessories: "Accessories",
+};
+function visibleSingleChoiceEntries() {
+  return visibleSingleChoiceFilterNames
+    .map((name) => [name, singleChoiceFilters[name]])
+    .filter(([, filter]) => filter?.toggle && filter?.summary && filter?.hint && filter?.list);
+}
+
+function setHasExactly(set, values) {
+  return set.size === values.length && values.every((value) => set.has(value));
+}
+
+function filterOptionLabel(name, value) {
+  return singleChoiceFilters[name].options.find((option) => option.value === value)?.label || "";
+}
+
+function selectedAgeFitValues() {
+  const values = new Set([...selectedAgeFits].filter((value) => categoryAgeFitValues.has(value)));
+  const legacyAgeFit = choiceValue("ageFit");
+  if (categoryAgeFitValues.has(legacyAgeFit)) values.add(legacyAgeFit);
+  return values;
+}
+
+function setSelectedAgeFits(values) {
+  selectedAgeFits = new Set([...values].filter((value) => categoryAgeFitValues.has(value)));
+  singleChoiceFilters.ageFit.value = selectedAgeFits.size === 1 ? [...selectedAgeFits][0] : "";
+}
+
+function clearSelectedAgeFits() {
+  selectedAgeFits.clear();
+  if (categoryAgeFitValues.has(choiceValue("ageFit"))) {
+    singleChoiceFilters.ageFit.value = "";
+  }
+}
+
+function isCategorySizeActive() {
+  return Boolean(choiceValue("type") || selectedAgeFitValues().size || selectedSizes.size || womenOnly);
+}
+
+function clearCategorySizeFilters() {
+  singleChoiceFilters.type.value = "";
+  singleChoiceFilters.ageFit.value = "";
+  singleChoiceFilters.size.value = "";
+  selectedSizes.clear();
+  selectedAgeFits.clear();
+  womenOnly = false;
+}
+
+function updateSizeClearButton() {
+  clearSizesButton.hidden = !isCategorySizeActive();
+}
+
+function selectedSizeSummaryLabels() {
+  const remaining = new Set(selectedSizes);
+  const labels = [];
+  for (const group of sizeFilterGroups) {
+    const values = sizeOptionsForGroup(group.value).map((option) => option.value);
+    if (!values.length) continue;
+    if (values.every((value) => remaining.has(value))) {
+      labels.push(group.value === "shoes" ? "Shoe sizes" : `${group.label} sizes`);
+      for (const value of values) remaining.delete(value);
+    }
+  }
+  const optionLabels = singleChoiceFilters.size.options
+    .filter((option) => remaining.has(option.value))
+    .map((option) => option.label);
+  return labels.concat(optionLabels);
+}
+
+function categorySizeLabel() {
+  if (!isCategorySizeActive()) return "Any size";
+  const ageFits = selectedAgeFitValues();
+  if (!choiceValue("type") && ageFits.size === 1 && ageFits.has("kids") && setHasExactly(selectedSizes, quick3To6SizeValues)) {
+    return "3Y–6Y";
+  }
+
+  const labels = [];
+  const type = choiceValue("type");
+  const hasWomenAgeFitOnly = ageFits.size === 1 && ageFits.has("women");
+  if (type && !(type === "clothes" && hasWomenAgeFitOnly)) {
+    labels.push(categoryTypeLabels[type] || filterOptionLabel("type", type));
+  }
+  for (const ageFit of ageFits) {
+    labels.push(ageFit === "women" ? "Women only" : filterOptionLabel("ageFit", ageFit));
+  }
+  const sizeLabels = selectedSizeSummaryLabels();
+  if (sizeLabels.length > 2) {
+    labels.push(`${selectedSizes.size} sizes`);
+  } else {
+    labels.push(...sizeLabels);
+  }
+  if (!labels.length) return "Any size";
+  return labels.length <= 2 ? labels.join(", ") : `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+}
 
 function money(value, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -1289,12 +1392,7 @@ function choiceLabel(name) {
     return labels.length <= 2 ? labels.join(", ") : `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
   }
   if (name === "size") {
-    if (!selectedSizes.size) return "Any size";
-    const labels = visibleChoiceOptions("size")
-      .filter((option) => selectedSizes.has(option.value))
-      .map((option) => option.label);
-    if (!labels.length) return "Any size";
-    return labels.length <= 2 ? labels.join(", ") : `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+    return categorySizeLabel();
   }
   return filter.options.find((option) => option.value === filter.value)?.label || "";
 }
@@ -1395,7 +1493,7 @@ function isAdultClothingSize(size = "") {
 }
 
 function isWomenModeActive() {
-  return womenOnly || choiceValue("ageFit") === "women";
+  return womenOnly || selectedAgeFitValues().has("women");
 }
 
 function hasAdultSizeOption(find) {
@@ -1404,7 +1502,7 @@ function hasAdultSizeOption(find) {
 
 function visibleChoiceOptions(name) {
   const filter = singleChoiceFilters[name];
-  if (name === "gender" && choiceValue("ageFit") === "women") {
+  if (name === "gender" && isWomenModeActive()) {
     return filter.options.filter((option) => option.value === "");
   }
   if (name !== "size") return filter.options;
@@ -1423,6 +1521,11 @@ function defaultSizeForAgeFit(ageFit) {
 }
 
 function applyAgeFitDefaults(ageFit) {
+  if (categoryAgeFitValues.has(ageFit)) {
+    setSelectedAgeFits(new Set([ageFit]));
+  } else {
+    clearSelectedAgeFits();
+  }
   if (ageFit === "women") {
     singleChoiceFilters.type.value = "clothes";
     selectedGenders.clear();
@@ -1511,8 +1614,8 @@ function selectedShoeSizeMatches(size, find, filter = "") {
   });
 }
 
-function sizeMatches(size, filter, find) {
-  const selectedAgeFit = choiceValue("ageFit");
+function sizeMatches(size, filter, find, forcedAgeFit = "") {
+  const selectedAgeFit = forcedAgeFit || choiceValue("ageFit");
   const filterAgeFit = sizeFilterAgeFit(filter);
   const ageFit = filterAgeFit || selectedAgeFit;
   const isShoe = isShoeFind(find);
@@ -1636,9 +1739,15 @@ function eligibleSizeOptions(find) {
 
 function matchingSizeOptions(find) {
   const filters = selectedSizes.size ? [...selectedSizes] : [""];
+  const ageFits = selectedAgeFitValues();
   return eligibleSizeOptions(find).filter((option) => {
-    if (isWomenModeActive() && !isShoeFind(find) && !isAdultClothingSize(option.size)) return false;
-    return filters.some((filter) => sizeMatches(option.size, filter, find));
+    if (womenOnly && !isShoeFind(find) && !isAdultClothingSize(option.size)) return false;
+    return filters.some((filter) => {
+      if (selectedSizes.size || !ageFits.size) {
+        return sizeMatches(option.size, filter, find);
+      }
+      return [...ageFits].some((ageFit) => sizeMatches(option.size, filter, find, ageFit));
+    });
   });
 }
 
@@ -1786,7 +1895,7 @@ function renderSingleChoiceList(name) {
       clearButton.textContent = `Clear (${multiSelected.size})`;
       clearButton.addEventListener("click", () => {
         multiSelected.clear();
-        updateSingleChoicePanels();
+        refreshChoicePanel(name);
         render();
       });
       quickActions.append(clearButton);
@@ -1828,7 +1937,7 @@ function renderSingleChoiceList(name) {
         } else {
           multiSelected.add(option.value);
         }
-        updateSingleChoicePanels();
+        refreshChoicePanel(name);
         render();
         return;
       }
@@ -1846,16 +1955,18 @@ function renderSingleChoiceList(name) {
       }
       if (name === "type") {
         if (option.value === "shoes") {
+          clearSelectedAgeFits();
           singleChoiceFilters.ageFit.value = "shoes";
           singleChoiceFilters.size.value = defaultSizeForAgeFit("shoes");
           selectedSizes.clear();
         } else if (option.value === "accessories") {
+          clearSelectedAgeFits();
           singleChoiceFilters.ageFit.value = "accessories";
           singleChoiceFilters.size.value = defaultSizeForAgeFit("accessories");
           selectedSizes.clear();
         } else if (option.value === "clothes" && ["shoes", "accessories"].includes(choiceValue("ageFit"))) {
-          singleChoiceFilters.ageFit.value = "kids";
-          singleChoiceFilters.size.value = defaultSizeForAgeFit("kids");
+          clearSelectedAgeFits();
+          singleChoiceFilters.ageFit.value = "";
           selectedSizes.clear();
         }
       }
@@ -1865,6 +1976,14 @@ function renderSingleChoiceList(name) {
     });
     filter.list.append(button);
   }
+}
+
+function refreshChoicePanel(name) {
+  const filter = singleChoiceFilters[name];
+  if (!filter) return;
+  filter.summary.textContent = choiceLabel(name);
+  renderSingleChoiceList(name);
+  if (name === "size") updateSizeClearButton();
 }
 
 function sizeOptionsForGroup(groupValue) {
@@ -1886,32 +2005,163 @@ function renderSizeChoiceList(filter) {
     quickActions.append(button);
   };
 
-  makeQuickButton("Any size", () => {
-    selectedSizes.clear();
-    updateSingleChoicePanels();
-    render();
-  }, !selectedSizes.size);
+  if (isCategorySizeActive()) {
+    makeQuickButton("Clear", () => {
+      clearCategorySizeFilters();
+      refreshChoicePanel("size");
+      render();
+    });
+  }
 
-  for (const group of sizeFilterGroups) {
+  const quick3To6Active = !choiceValue("type")
+    && selectedAgeFitValues().size === 1
+    && selectedAgeFitValues().has("kids")
+    && setHasExactly(selectedSizes, quick3To6SizeValues);
+  makeQuickButton("3Y–6Y", () => {
+    if (quick3To6Active) {
+      clearCategorySizeFilters();
+    } else {
+      womenOnly = false;
+      singleChoiceFilters.type.value = "";
+      setSelectedAgeFits(new Set(["kids"]));
+      selectedSizes = new Set(quick3To6SizeValues);
+    }
+    refreshChoicePanel("size");
+    render();
+  }, quick3To6Active);
+
+  for (const group of sizeFilterGroups.filter((item) => item.value !== "shoes")) {
     const values = sizeOptionsForGroup(group.value).map((option) => option.value);
     if (!values.length) continue;
     const active = values.every((value) => selectedSizes.has(value));
-    makeQuickButton(group.label, () => {
+    makeQuickButton(`${group.label} sizes`, () => {
       trackClick("size_group_filter_click", null, {
         title: group.label,
         sizeGroup: group.value,
       });
+      clearSelectedAgeFits();
+      if (group.value === "women") {
+        womenOnly = true;
+        setSelectedAgeFits(new Set(["women"]));
+        selectedGenders.clear();
+        singleChoiceFilters.type.value = "clothes";
+      } else {
+        womenOnly = false;
+        if (["shoes", "accessories"].includes(choiceValue("type"))) {
+          singleChoiceFilters.type.value = "";
+        }
+      }
       if (active) {
         for (const value of values) selectedSizes.delete(value);
       } else {
         for (const value of values) selectedSizes.add(value);
       }
-      updateSingleChoicePanels();
+      refreshChoicePanel("size");
       render();
     }, active);
   }
 
   filter.list.append(quickActions);
+
+  const typeSection = document.createElement("div");
+  typeSection.className = "sizeGroup";
+  const typeLabel = document.createElement("div");
+  typeLabel.className = "sizeGroupLabel";
+  typeLabel.textContent = "Item category";
+  typeSection.append(typeLabel);
+  const typeGrid = document.createElement("div");
+  typeGrid.className = "sourceGrid sizeGrid categoryGrid";
+  singleChoiceFilters.type.options
+    .filter((option) => option.value)
+    .forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = choiceValue("type") === option.value ? "sourceOption selected" : "sourceOption";
+      const checkbox = document.createElement("span");
+      checkbox.className = "sourceCheck";
+      const optionLabel = document.createElement("span");
+      optionLabel.className = "sourceOptionLabel";
+      optionLabel.textContent = categoryTypeLabels[option.value] || option.label;
+      button.append(checkbox, optionLabel);
+      button.addEventListener("click", () => {
+        trackClick("category_filter_click", null, {
+          title: option.label,
+          type: option.value,
+        });
+        if (choiceValue("type") === option.value) {
+          singleChoiceFilters.type.value = "";
+        } else {
+          singleChoiceFilters.type.value = option.value;
+          if (option.value === "shoes") {
+            clearSelectedAgeFits();
+            singleChoiceFilters.ageFit.value = "shoes";
+            womenOnly = false;
+            selectedSizes.clear();
+          } else if (option.value === "accessories") {
+            clearSelectedAgeFits();
+            singleChoiceFilters.ageFit.value = "accessories";
+            womenOnly = false;
+            selectedSizes.clear();
+          } else if (["shoes", "accessories"].includes(choiceValue("ageFit"))) {
+            clearSelectedAgeFits();
+            selectedSizes.clear();
+          }
+        }
+        refreshChoicePanel("size");
+        render();
+      });
+      typeGrid.append(button);
+    });
+  typeSection.append(typeGrid);
+  filter.list.append(typeSection);
+
+  const ageSection = document.createElement("div");
+  ageSection.className = "sizeGroup";
+  const ageLabel = document.createElement("div");
+  ageLabel.className = "sizeGroupLabel";
+  ageLabel.textContent = "Age / fit";
+  ageSection.append(ageLabel);
+  const ageGrid = document.createElement("div");
+  ageGrid.className = "sourceGrid sizeGrid categoryGrid";
+  const activeAgeFits = selectedAgeFitValues();
+  singleChoiceFilters.ageFit.options
+    .filter((option) => categoryAgeFitValues.has(option.value))
+    .forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = activeAgeFits.has(option.value) ? "sourceOption selected" : "sourceOption";
+      const checkbox = document.createElement("span");
+      checkbox.className = "sourceCheck";
+      const optionLabel = document.createElement("span");
+      optionLabel.className = "sourceOptionLabel";
+      optionLabel.textContent = option.value === "women" ? "Women only" : option.label;
+      button.append(checkbox, optionLabel);
+      button.addEventListener("click", () => {
+        trackClick("age_fit_filter_click", null, {
+          title: option.label,
+          ageFit: option.value,
+        });
+        const nextAgeFits = selectedAgeFitValues();
+        if (nextAgeFits.has(option.value)) {
+          nextAgeFits.delete(option.value);
+        } else {
+          nextAgeFits.add(option.value);
+        }
+        setSelectedAgeFits(nextAgeFits);
+        if (nextAgeFits.has("women")) {
+          singleChoiceFilters.type.value = "clothes";
+          selectedGenders.clear();
+        } else if (["shoes", "accessories"].includes(choiceValue("type"))) {
+          singleChoiceFilters.type.value = "";
+        }
+        womenOnly = false;
+        refreshChoicePanel("size");
+        render();
+      });
+      ageGrid.append(button);
+    });
+  ageSection.append(ageGrid);
+  filter.list.append(ageSection);
 
   for (const group of sizeFilterGroups) {
     const options = sizeOptionsForGroup(group.value);
@@ -1945,12 +2195,28 @@ function renderSizeChoiceList(filter) {
           title: option.label,
           size: option.value,
         });
+        clearSelectedAgeFits();
+        if (group.value === "women") {
+          womenOnly = true;
+          setSelectedAgeFits(new Set(["women"]));
+          selectedGenders.clear();
+          singleChoiceFilters.type.value = "clothes";
+        } else if (group.value === "shoes") {
+          womenOnly = false;
+          clearSelectedAgeFits();
+          singleChoiceFilters.type.value = "shoes";
+        } else {
+          womenOnly = false;
+          if (["shoes", "accessories"].includes(choiceValue("type"))) {
+            singleChoiceFilters.type.value = "";
+          }
+        }
         if (selectedSizes.has(option.value)) {
           selectedSizes.delete(option.value);
         } else {
           selectedSizes.add(option.value);
         }
-        updateSingleChoicePanels();
+        refreshChoicePanel("size");
         render();
       });
       grid.append(button);
@@ -1962,7 +2228,7 @@ function renderSizeChoiceList(filter) {
 }
 
 function updateSingleChoicePanels() {
-  for (const [name, filter] of Object.entries(singleChoiceFilters)) {
+  for (const [name, filter] of visibleSingleChoiceEntries()) {
     const visibleValues = new Set(visibleChoiceOptions(name).map((option) => option.value));
     if (name === "size") {
       selectedSizes = new Set([...selectedSizes].filter((value) => visibleValues.has(value)));
@@ -1974,16 +2240,20 @@ function updateSingleChoicePanels() {
       filter.value = "";
     }
     const isOpen = openChoiceFilter === name;
+    filter.toggle.closest(".filterGroup")?.classList.toggle("isOpen", isOpen);
     filter.list.hidden = !isOpen;
     filter.hint.textContent = isOpen ? "Hide" : "Choose";
     filter.summary.textContent = choiceLabel(name);
     filter.toggle.setAttribute("aria-expanded", String(isOpen));
     renderSingleChoiceList(name);
   }
+  updateSizeClearButton();
 }
 
 function toggleSingleChoicePanel(name) {
-  openChoiceFilter = openChoiceFilter === name ? "" : name;
+  if (!visibleSingleChoiceFilterNames.includes(name)) return;
+  const closingSamePanel = openChoiceFilter === name;
+  openChoiceFilter = closingSamePanel ? "" : name;
   brandsOpen = false;
   sourcesOpen = false;
   searchOpen = false;
@@ -2665,16 +2935,19 @@ function applyData(data, labelPrefix = "Cached") {
   const priceDropCount = allFinds.filter((find) => find.priceComparison?.priceDelta < -0.01).length;
   if (!womenCount) {
     womenOnly = false;
-    if (choiceValue("ageFit") === "women") {
-      singleChoiceFilters.ageFit.value = "kids";
-      applyAgeFitDefaults("kids");
+    if (selectedAgeFitValues().has("women")) {
+      selectedAgeFits.delete("women");
+      if (choiceValue("ageFit") === "women") {
+        singleChoiceFilters.ageFit.value = "";
+      }
     }
   }
   const newText = newCount ? ` · ${newCount} new` : "";
   const priceDropText = priceDropCount ? ` · ${priceDropCount} price drops` : "";
   if (!newCount) newOnly = false;
   if (!priceDropCount) priceDropsOnly = false;
-  womenOnlyButton.hidden = !womenCount;
+  age3To6Button.hidden = true;
+  womenOnlyButton.hidden = true;
   newOnlyButton.hidden = !newCount;
   priceDropsButton.hidden = !priceDropCount;
   const sourceText = sourceLabelText(data);
@@ -2713,9 +2986,10 @@ function render() {
   const finds = filteredFinds();
   renderPromoBoard();
   countEl.textContent = finds.length;
-  age3To6Button.classList.toggle("active", choiceValue("ageFit") === "kids"
-    && selectedSizes.size === 4
-    && ["3y", "4y", "5y", "6y"].every((value) => selectedSizes.has(value)));
+  age3To6Button.classList.toggle("active", !choiceValue("type")
+    && selectedAgeFitValues().size === 1
+    && selectedAgeFitValues().has("kids")
+    && setHasExactly(selectedSizes, quick3To6SizeValues));
   womenOnlyButton.classList.toggle("active", isWomenModeActive());
   newOnlyButton.classList.toggle("active", newOnly);
   priceDropsButton.classList.toggle("active", priceDropsOnly);
@@ -2754,9 +3028,11 @@ function render() {
     sourceLink.addEventListener("click", () => {
       trackClick("brand_chip_click", find, { brand: find.brand });
       womenOnly = false;
-      if (choiceValue("ageFit") === "women") {
-        singleChoiceFilters.ageFit.value = "kids";
-        applyAgeFitDefaults("kids");
+      if (selectedAgeFitValues().has("women")) {
+        selectedAgeFits.delete("women");
+        if (choiceValue("ageFit") === "women") {
+          singleChoiceFilters.ageFit.value = "";
+        }
       }
       newOnly = false;
       priceDropsOnly = false;
@@ -2790,9 +3066,11 @@ function render() {
     storeLink.addEventListener("click", () => {
       trackClick("store_chip_click", find, { source: find.source });
       womenOnly = false;
-      if (choiceValue("ageFit") === "women") {
-        singleChoiceFilters.ageFit.value = "kids";
-        applyAgeFitDefaults("kids");
+      if (selectedAgeFitValues().has("women")) {
+        selectedAgeFits.delete("women");
+        if (choiceValue("ageFit") === "women") {
+          singleChoiceFilters.ageFit.value = "";
+        }
       }
       newOnly = false;
       priceDropsOnly = false;
@@ -2955,16 +3233,23 @@ clearSourcesButton.addEventListener("click", () => {
   render();
 });
 
+clearSizesButton.addEventListener("click", () => {
+  clearCategorySizeFilters();
+  updateSingleChoicePanels();
+  render();
+});
+
 age3To6Button.addEventListener("click", () => {
-  const active = choiceValue("ageFit") === "kids"
-    && selectedSizes.size === 4
-    && ["3y", "4y", "5y", "6y"].every((value) => selectedSizes.has(value));
+  const active = !choiceValue("type")
+    && selectedAgeFitValues().size === 1
+    && selectedAgeFitValues().has("kids")
+    && setHasExactly(selectedSizes, quick3To6SizeValues);
   womenOnly = false;
   newOnly = false;
   priceDropsOnly = false;
   singleChoiceFilters.type.value = "";
-  singleChoiceFilters.ageFit.value = "kids";
-  selectedSizes = active ? new Set() : new Set(["3y", "4y", "5y", "6y"]);
+  setSelectedAgeFits(active ? new Set() : new Set(["kids"]));
+  selectedSizes = active ? new Set() : new Set(quick3To6SizeValues);
   closeOpenPanels();
   populateFilters(allFinds);
   updateAdminControls();
@@ -2973,7 +3258,7 @@ age3To6Button.addEventListener("click", () => {
 });
 
 womenOnlyButton.addEventListener("click", () => {
-  const nextWomenOnly = choiceValue("ageFit") !== "women";
+  const nextWomenOnly = !isWomenModeActive();
   womenOnly = nextWomenOnly;
   if (nextWomenOnly) {
     newOnly = false;
@@ -2982,7 +3267,7 @@ womenOnlyButton.addEventListener("click", () => {
     selectedSources.clear();
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
-    singleChoiceFilters.ageFit.value = "women";
+    setSelectedAgeFits(new Set(["women"]));
     selectedGenders.clear();
     applyAgeFitDefaults("women");
     closeOpenPanels();
@@ -2990,7 +3275,7 @@ womenOnlyButton.addEventListener("click", () => {
     updateAdminControls();
     updateSingleChoicePanels();
   } else {
-    singleChoiceFilters.ageFit.value = "kids";
+    setSelectedAgeFits(new Set(["kids"]));
     applyAgeFitDefaults("kids");
     updateSingleChoicePanels();
   }
@@ -3006,7 +3291,7 @@ newOnlyButton.addEventListener("click", () => {
     searchInput.value = "";
     singleChoiceFilters.discount.value = "0.4";
     singleChoiceFilters.type.value = "";
-    singleChoiceFilters.ageFit.value = "";
+    clearSelectedAgeFits();
     selectedGenders.clear();
     singleChoiceFilters.size.value = "";
     selectedSizes.clear();
@@ -3022,8 +3307,11 @@ priceDropsButton.addEventListener("click", () => {
   priceDropsOnly = !priceDropsOnly;
   if (priceDropsOnly) {
     womenOnly = false;
-    if (choiceValue("ageFit") === "women") {
-      singleChoiceFilters.ageFit.value = "kids";
+    if (selectedAgeFitValues().has("women")) {
+      selectedAgeFits.delete("women");
+      if (choiceValue("ageFit") === "women") {
+        singleChoiceFilters.ageFit.value = "";
+      }
       applyAgeFitDefaults("kids");
       updateSingleChoicePanels();
     }
@@ -3031,15 +3319,32 @@ priceDropsButton.addEventListener("click", () => {
   render();
 });
 
-brandToggleArea.addEventListener("click", () => {
-  toggleBrandPanel();
-});
+function attachPanelToggle(toggle, onToggle) {
+  const handleToggle = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onToggle();
+  };
+  toggle.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    toggle.dataset.pointerHandled = "true";
+    handleToggle(event);
+  });
+  toggle.addEventListener("click", (event) => {
+    if (toggle.dataset.pointerHandled === "true") {
+      delete toggle.dataset.pointerHandled;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    handleToggle(event);
+  });
+}
 
-sourceToggleArea.addEventListener("click", () => {
-  toggleSourcePanel();
-});
+attachPanelToggle(brandToggleArea, toggleBrandPanel);
+attachPanelToggle(sourceToggleArea, toggleSourcePanel);
 
-toggleSearchButton.addEventListener("click", () => {
+attachPanelToggle(toggleSearchButton, () => {
   const nextOpen = !searchOpen;
   searchOpen = nextOpen;
   brandsOpen = false;
@@ -3132,9 +3437,12 @@ refreshReport?.addEventListener("click", (event) => {
   event.stopPropagation();
 });
 
-for (const [name, filter] of Object.entries(singleChoiceFilters)) {
+for (const [name, filter] of visibleSingleChoiceEntries()) {
   renderSingleChoiceList(name);
-  filter.toggle.addEventListener("click", () => toggleSingleChoicePanel(name));
+  attachPanelToggle(filter.toggle, () => toggleSingleChoicePanel(name));
+  filter.list.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
 }
 updateSingleChoicePanels();
 updateAdminControls();

@@ -268,20 +268,25 @@ main {
 }
 
 .controls {
+  position: relative;
+  z-index: 30;
   display: grid;
   grid-template-columns:
-    minmax(180px, 1.2fr)
-    minmax(145px, 1fr)
-    minmax(104px, 0.7fr)
-    minmax(104px, 0.7fr)
-    minmax(104px, 0.7fr)
-    minmax(108px, 0.72fr)
-    minmax(88px, 0.58fr)
-    minmax(132px, 0.88fr)
+    minmax(190px, 1.22fr)
+    minmax(190px, 1.12fr)
+    minmax(126px, 0.72fr)
+    minmax(126px, 0.72fr)
+    minmax(126px, 0.72fr)
+    minmax(210px, 1.18fr)
     38px;
   gap: 6px;
   align-items: start;
   margin-bottom: 18px;
+  overflow: visible;
+}
+
+.stateOnlyFilter {
+  display: none !important;
 }
 
 label,
@@ -296,6 +301,10 @@ label,
 
 .filterGroup {
   grid-template-rows: 24px 42px;
+}
+
+.filterGroup.isOpen {
+  z-index: 120;
 }
 
 .filterHead {
@@ -390,6 +399,7 @@ label,
 
 .searchFilter {
   position: relative;
+  z-index: 30;
   align-self: end;
   justify-self: start;
 }
@@ -464,7 +474,7 @@ input {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 20;
+  z-index: 120;
   width: min(760px, calc(100vw - 64px));
   overflow: auto;
   max-height: 360px;
@@ -483,7 +493,7 @@ input {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 20;
+  z-index: 120;
   display: grid;
   gap: 6px;
   width: min(280px, calc(100vw - 64px));
@@ -563,14 +573,22 @@ input {
 }
 
 .choiceList {
-  width: max(100%, min(220px, calc(100vw - 64px)));
+  width: min(360px, calc(100vw - 64px));
+  max-height: min(620px, 70vh);
+  overflow: auto;
+}
+
+#genderList,
+#sizeList {
+  left: auto;
+  right: 0;
 }
 
 #sizeList {
   left: auto;
   right: 0;
-  width: max(100%, min(320px, calc(100vw - 64px)));
-  max-height: min(420px, calc(100vh - 220px));
+  width: min(620px, calc(100vw - 64px));
+  max-height: min(560px, calc(100vh - 220px));
   overflow: auto;
 }
 
@@ -595,6 +613,10 @@ input {
 #sizeList .sizeGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 0;
+}
+
+#sizeList .categoryGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .sourceList[hidden] {
