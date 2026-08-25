@@ -28,15 +28,15 @@ body {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 220;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 24px 32px;
-  background: rgba(251, 247, 240, 0.92);
+  background: var(--paper);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px rgba(35, 51, 49, 0.04);
 }
 
 .titleBlock {
@@ -110,7 +110,11 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .promoMenu {
@@ -269,7 +273,7 @@ main {
 
 .controls {
   position: relative;
-  z-index: 30;
+  z-index: 60;
   display: grid;
   grid-template-columns:
     minmax(190px, 1.22fr)
@@ -982,7 +986,8 @@ input {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
-  width: min(680px, calc(100vw - 64px));
+  z-index: 260;
+  width: min(760px, calc(100vw - 64px));
   max-height: min(620px, calc(100vh - 132px));
   overflow: auto;
   margin: 0;
@@ -991,6 +996,10 @@ input {
   padding: 14px;
   background: #fffdf8;
   box-shadow: 0 14px 30px rgba(35, 51, 49, 0.12);
+}
+
+.clickReport {
+  width: min(980px, calc(100vw - 64px));
 }
 
 .refreshReport[hidden],
@@ -1626,15 +1635,18 @@ h2 {
 
 @media (max-width: 780px) {
   .topbar {
+    position: relative;
     align-items: flex-start;
     flex-direction: column;
     padding: 18px;
+    gap: 14px;
   }
 
   .topbarActions {
     width: 100%;
     align-items: stretch;
     flex-wrap: wrap;
+    order: 2;
   }
 
   .promoMenu,
@@ -1650,8 +1662,15 @@ h2 {
     justify-content: center;
   }
 
-  .promoBoard,
   .refreshReport {
+    left: 0;
+    right: auto;
+    width: calc(100vw - 36px);
+    margin-left: 0;
+    max-height: min(560px, calc(100vh - 118px));
+  }
+
+  .promoBoard {
     left: 0;
     right: auto;
     width: calc(100vw - 36px);
