@@ -688,6 +688,16 @@ const stores = [
     baseUrl: "https://www.thistleandwren.com",
     mode: "all-products",
   },
+  {
+    source: "No Small Miracle",
+    baseUrl: "https://nosmallmiraclechildrensboutique.com",
+    mode: "all-products",
+  },
+  {
+    source: "Salchicha Kids",
+    baseUrl: "https://shop-salchicha.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;

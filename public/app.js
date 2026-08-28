@@ -439,6 +439,8 @@ const storeHomeUrls = new Map([
   ["Jean + Hadley", "https://www.jeanandhadley.com"],
   ["SK Boutique", "https://shopskboutique.com"],
   ["Thistle and Wren", "https://www.thistleandwren.com"],
+  ["No Small Miracle", "https://nosmallmiraclechildrensboutique.com"],
+  ["Salchicha Kids", "https://shop-salchicha.com"],
 ]);
 
 const storeInstagramUrls = new Map([
@@ -561,6 +563,8 @@ const storeInstagramUrls = new Map([
   ["Whoopi Kids", "https://www.instagram.com/whoopikids/"],
   ["Willkie's", "https://www.instagram.com/shopwillkies/"],
   ["Thistle and Wren", "https://www.instagram.com/thistleandwren/"],
+  ["No Small Miracle", "https://www.instagram.com/nosmallmiracle/"],
+  ["Salchicha Kids", "https://www.instagram.com/salchichakids/"],
 ]);
 
 function createInstagramLink(sourceName) {
