@@ -698,6 +698,16 @@ const stores = [
     baseUrl: "https://shop-salchicha.com",
     mode: "all-products",
   },
+  {
+    source: "Lili Concept Store",
+    baseUrl: "https://liliconceptstore.com",
+    mode: "all-products",
+  },
+  {
+    source: "Anderson Parker",
+    baseUrl: "https://shopap.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;
