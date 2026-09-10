@@ -288,6 +288,7 @@ const newlyAddedSources = [
   "Jean + Hadley",
   "SK Boutique",
   "Thistle and Wren",
+  "Little Cousins",
 ];
 const trustedStoreSources = new Set([
   "Buttons and Bows NY",
@@ -443,6 +444,7 @@ const storeHomeUrls = new Map([
   ["Salchicha Kids", "https://shop-salchicha.com"],
   ["Lili Concept Store", "https://liliconceptstore.com"],
   ["Anderson Parker", "https://shopap.com"],
+  ["Little Cousins", "https://shoplittlecousins.com"],
 ]);
 
 const storeInstagramUrls = new Map([
@@ -569,6 +571,7 @@ const storeInstagramUrls = new Map([
   ["Salchicha Kids", "https://www.instagram.com/salchichakids/"],
   ["Lili Concept Store", "https://www.instagram.com/lili.concept.store/"],
   ["Anderson Parker", "https://www.instagram.com/shopandersonparker/"],
+  ["Little Cousins", "https://www.instagram.com/shoplittlecousins/"],
 ]);
 
 function createInstagramLink(sourceName) {

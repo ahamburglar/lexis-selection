@@ -708,6 +708,11 @@ const stores = [
     baseUrl: "https://shopap.com",
     mode: "all-products",
   },
+  {
+    source: "Little Cousins",
+    baseUrl: "https://shoplittlecousins.com",
+    mode: "all-products",
+  },
 ];
 
 let productCache = null;
