@@ -684,8 +684,55 @@ const stores = [
     mode: "all-products",
   },
   {
+    source: "Chichuhukid",
+    baseUrl: "https://chichuhukid.com",
+    mode: "all-products",
+  },
+  {
+    source: "Pickles",
+    baseUrl: "https://www.pickleskids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Dallhouse",
+    baseUrl: "https://wearedalhouse.com",
+    mode: "all-products",
+  },
+  {
+    source: "Chicke",
+    baseUrl: "https://www.shopchicke.com",
+    mode: "all-products",
+  },
+  {
+    source: "Papallou",
+    baseUrl: "https://papallou.com",
+    mode: "all-products",
+  },
+  {
+    source: "Boy Meets Girl",
+    baseUrl: "https://bmgkids.com",
+    mode: "all-products",
+  },
+  {
+    source: "Moon and Sun Studio",
+    baseUrl: "https://moonandsunstudio.com",
+    mode: "all-products",
+    quickUsesAllProducts: true,
+    quickPages: 2,
+  },
+  {
+    source: "Little Wild",
+    baseUrl: "https://littlewildkid.store",
+    mode: "all-products",
+  },
+  {
     source: "Thistle and Wren",
     baseUrl: "https://www.thistleandwren.com",
+    mode: "all-products",
+  },
+  {
+    source: "Thistle and Poppy",
+    baseUrl: "https://www.thistleandpoppy.com",
     mode: "all-products",
   },
   {
@@ -1381,13 +1428,26 @@ function productToFind(product, store, minDiscount) {
 
 async function fetchShopifyProductPaths(store, productPaths, pageCount) {
   const products = [];
+  const targetBrands = new Set((store.onlyTargetBrands || []).map(normalizeBrand));
 
   for (const productPath of productPaths) {
     for (let page = 1; page <= pageCount; page += 1) {
       const url = `${store.baseUrl}${productPath}?limit=250&page=${page}`;
-      const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
-      if (!response.ok) break;
-      const json = await response.json();
+      let json;
+      try {
+        const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
+        if (!response.ok) break;
+        json = await response.json();
+      } catch (fetchError) {
+        try {
+          const { stdout } = await execFileAsync("curl", ["-L", "-s", "--max-time", "30", "-A", "Mozilla/5.0", url], {
+            maxBuffer: 20 * 1024 * 1024,
+          });
+          json = JSON.parse(stdout);
+        } catch {
+          throw fetchError;
+        }
+      }
       const batch = json.products || [];
       if (!batch.length) break;
       products.push(...(
