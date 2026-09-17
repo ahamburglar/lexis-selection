@@ -1345,6 +1345,15 @@ function compareCurrentFeedOrder(a, b) {
   return originalSortIndex(a) - originalSortIndex(b);
 }
 
+function isWeeMondine(find) {
+  return String(find.source || "").trim().toLowerCase() === "wee mondine";
+}
+
+function compareWeeMondineWithinSameDiscount(a, b) {
+  if (displayedDiscountValue(a.discount) !== displayedDiscountValue(b.discount)) return 0;
+  return Number(isWeeMondine(a)) - Number(isWeeMondine(b));
+}
+
 function stableShuffleValue(find) {
   const text = `${shuffleSeed}|${find.source || ""}|${find.brand || ""}|${find.title || ""}|${find.url || ""}`;
   let hash = 2166136261;
@@ -1366,35 +1375,42 @@ function sortFinds(finds) {
     if (sortValue === "alpha-asc") {
       return compareTitles(a, b)
         || compareNumbers(a.salePrice, b.salePrice)
+        || compareWeeMondineWithinSameDiscount(a, b)
         || compareCurrentFeedOrder(a, b);
     }
     if (sortValue === "alpha-desc") {
       return compareTitles(b, a)
         || compareNumbers(a.salePrice, b.salePrice)
+        || compareWeeMondineWithinSameDiscount(a, b)
         || compareCurrentFeedOrder(a, b);
     }
     if (sortValue === "price-asc") {
       return compareNumbers(a.salePrice, b.salePrice)
         || compareTitles(a, b)
+        || compareWeeMondineWithinSameDiscount(a, b)
         || compareCurrentFeedOrder(a, b);
     }
     if (sortValue === "price-desc") {
       return compareNumbers(b.salePrice, a.salePrice)
         || compareTitles(a, b)
+        || compareWeeMondineWithinSameDiscount(a, b)
         || compareCurrentFeedOrder(a, b);
     }
     if (sortValue === "discount-desc") {
       return compareNumbers(displayedDiscountValue(b.discount), displayedDiscountValue(a.discount))
+        || compareWeeMondineWithinSameDiscount(a, b)
         || compareNumbers(a.salePrice, b.salePrice)
         || compareTitles(a, b)
         || compareCurrentFeedOrder(a, b);
     }
     if (sortValue === "date-asc") {
-      return compareCurrentFeedOrder(b, a)
+      return compareWeeMondineWithinSameDiscount(a, b)
+        || compareCurrentFeedOrder(b, a)
         || compareTitles(a, b)
         || compareNumbers(a.salePrice, b.salePrice);
     }
-    return compareCurrentFeedOrder(a, b)
+    return compareWeeMondineWithinSameDiscount(a, b)
+      || compareCurrentFeedOrder(a, b)
       || compareTitles(a, b)
       || compareNumbers(a.salePrice, b.salePrice);
   });

@@ -1337,6 +1337,15 @@ function displayDiscount(discount) {
   return Math.round(discount * 100) / 100;
 }
 
+function isWeeMondineFind(find) {
+  return String(find?.source || "").trim().toLowerCase() === "wee mondine";
+}
+
+function compareWeeMondineWithinSameDiscount(a, b) {
+  if (displayDiscount(a.discount) !== displayDiscount(b.discount)) return 0;
+  return Number(isWeeMondineFind(a)) - Number(isWeeMondineFind(b));
+}
+
 function isAbnormalVariantPrice({ sale, original, discount }) {
   if (!Number.isFinite(sale) || !Number.isFinite(original) || !Number.isFinite(discount)) return true;
   if (sale <= 0 || original <= 0 || original <= sale) return true;
@@ -2093,7 +2102,8 @@ function findsFromCache(cache, minDiscount) {
       Number(b.isNew) - Number(a.isNew)
       || Number(b.priceComparison?.priceDelta < -0.01) - Number(a.priceComparison?.priceDelta < -0.01)
       || b.score - a.score
-      || b.discount - a.discount
+      || displayDiscount(b.discount) - displayDiscount(a.discount)
+      || compareWeeMondineWithinSameDiscount(a, b)
       || a.salePrice - b.salePrice
     ));
 }
