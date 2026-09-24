@@ -621,6 +621,12 @@
     "type": "clothes"
   },
   {
+    "name": "Stain and Stories",
+    "matches": ["stain and stories", "stain & stories"],
+    "collections": ["stain-and-stories"],
+    "type": "clothes"
+  },
+  {
     "name": "Meri Meri",
     "matches": ["meri meri"],
     "collections": ["meri-meri"],
