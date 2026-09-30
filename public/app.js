@@ -1534,7 +1534,7 @@ function adultSizeNumbers(size = "") {
 }
 
 function hasAdultLetterSize(size = "") {
-  return /\b(xxs|xs|s\/m|m\/l|small|medium|large|xl|xxl|2xl|3xl|x-large)\b/i.test(size);
+  return /\b(xxs|xs|s|m|l|s\/m|m\/l|small|medium|large|xl|xxl|2xl|3xl|x-large)\b/i.test(size);
 }
 
 function isAdultClothingSize(size = "") {
@@ -1728,7 +1728,7 @@ function sizeMatches(size, filter, find, forcedAgeFit = "") {
     if (!isAdultClothingSize(size)) return false;
     const lower = size.toLowerCase();
     const numbers = adultSizeNumbers(size);
-    return /\b(xxs|xs|small)\b/.test(lower)
+    return /\b(xxs|xs|s|small)\b/.test(lower)
       || /\bs\/m\b/.test(lower)
       || numbers.some((value) => value <= 36);
   }
@@ -1736,7 +1736,7 @@ function sizeMatches(size, filter, find, forcedAgeFit = "") {
     if (!isAdultClothingSize(size)) return false;
     const lower = size.toLowerCase();
     const numbers = adultSizeNumbers(size);
-    return /\b(medium|large)\b/.test(lower)
+    return /\b(m|l|medium|large)\b/.test(lower)
       || /\bm\/l\b/.test(lower)
       || numbers.some((value) => value >= 38 && value <= 42);
   }
