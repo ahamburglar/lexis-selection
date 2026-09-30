@@ -298,6 +298,67 @@ main {
   background: var(--panel);
 }
 
+.dataNote {
+  margin: -4px 0 18px;
+  max-width: 980px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.editorNotes {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.55fr) minmax(0, 1.45fr);
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.editorNotesHeader {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editorNotesHeader h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.editorNoteGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.editorNoteGrid article {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #fff5f1;
+}
+
+.editorNoteGrid strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.editorNoteGrid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .controls {
   position: relative;
   z-index: 60;
@@ -1814,6 +1875,10 @@ h2 {
   padding: 30px;
 }
 
+.wideContentSection {
+  max-width: 100%;
+}
+
 .contentSection h2:not(:first-child) {
   margin-top: 12px;
 }
@@ -1838,6 +1903,42 @@ h2 {
   color: var(--accent);
   font-size: 12px;
   font-weight: 900;
+}
+
+.guideTableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.guideTable {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.guideTable th,
+.guideTable td {
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.guideTable th {
+  background: #fff5f1;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.guideTable tr:last-child td {
+  border-bottom: 0;
 }
 
 @media (max-width: 780px) {
@@ -1911,6 +2012,11 @@ h2 {
 
   .footerLinks {
     gap: 8px 14px;
+  }
+
+  .editorNotes,
+  .editorNoteGrid {
+    grid-template-columns: 1fr;
   }
 
   .contentTopbar {
