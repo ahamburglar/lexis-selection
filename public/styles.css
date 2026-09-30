@@ -271,6 +271,33 @@ main {
   padding: 22px 24px 40px;
 }
 
+.homeInfoNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 18px;
+}
+
+.homeInfoNav a {
+  min-height: 36px;
+  border: 1px solid #e4d8ca;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(255, 253, 248, 0.86);
+  color: var(--accent);
+  box-shadow: 0 6px 16px rgba(35, 51, 49, 0.04);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.homeInfoNav a:hover {
+  border-color: #d8bfaf;
+  color: var(--ink);
+  background: var(--panel);
+}
+
 .controls {
   position: relative;
   z-index: 60;
@@ -1623,14 +1650,194 @@ h2 {
   padding: 0 32px 30px;
 }
 
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  max-width: 960px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-bottom: 14px;
+}
+
+.footerLinks a,
+.contentNav a,
+.contentSection a {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.footerLinks a:hover,
+.contentNav a:hover,
+.contentSection a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 .siteFooter p {
   max-width: 960px;
   margin: 0;
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.55;
+}
+
+.contentTopbar {
+  position: relative;
+}
+
+.contentBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.contentBurger {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.contentBrand span {
+  display: grid;
+  gap: 4px;
+}
+
+.contentBrand strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.contentBrand small {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contentNav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px 18px;
+}
+
+.contentPage {
+  display: grid;
+  gap: 22px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 48px 24px 70px;
+}
+
+.backToDeals {
+  width: max-content;
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--ink);
+  color: white;
+  box-shadow: 0 8px 18px rgba(35, 51, 49, 0.12);
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.backToDeals:hover {
+  background: #304542;
+}
+
+.contentHero {
+  display: grid;
+  gap: 16px;
+  max-width: 820px;
+  padding: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.contentHero h1 {
+  max-width: 760px;
+  font-size: clamp(38px, 6vw, 68px);
+}
+
+.contentHero p,
+.contentSection p,
+.contentCard p,
+.contentSteps p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contentCard,
+.contentSection,
+.contentSteps article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.contentCard {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.contentCard h2,
+.contentSection h2,
+.contentSteps h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.contentSection {
+  display: grid;
+  gap: 14px;
+  max-width: 880px;
+  padding: 30px;
+}
+
+.contentSection h2:not(:first-child) {
+  margin-top: 12px;
+}
+
+.contentSteps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contentSteps article {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.contentSteps span {
+  width: max-content;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #f6ded7;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 @media (max-width: 780px) {
@@ -1700,6 +1907,34 @@ h2 {
 
   .siteFooter {
     padding: 0 18px 24px;
+  }
+
+  .footerLinks {
+    gap: 8px 14px;
+  }
+
+  .contentTopbar {
+    gap: 18px;
+  }
+
+  .contentNav {
+    justify-content: flex-start;
+  }
+
+  .contentPage {
+    padding: 24px 18px 48px;
+  }
+
+  .contentHero,
+  .contentSection,
+  .contentCard,
+  .contentSteps article {
+    padding: 22px;
+  }
+
+  .contentGrid,
+  .contentSteps {
+    grid-template-columns: 1fr;
   }
 
   .controls {
