@@ -359,6 +359,73 @@ main {
   line-height: 1.45;
 }
 
+.resourceHub {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.resourceHubHeader {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.resourceHubHeader h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.resourceHubHeader p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.resourceLinkGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.resourceLinkGrid a {
+  display: grid;
+  gap: 8px;
+  min-height: 118px;
+  border: 1px solid #edd9d2;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff5f1;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.resourceLinkGrid a:hover {
+  border-color: #d8b2a7;
+  background: var(--panel);
+}
+
+.resourceLinkGrid strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.resourceLinkGrid span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .controls {
   position: relative;
   z-index: 60;
@@ -2015,7 +2082,9 @@ h2 {
   }
 
   .editorNotes,
-  .editorNoteGrid {
+  .editorNoteGrid,
+  .resourceHub,
+  .resourceLinkGrid {
     grid-template-columns: 1fr;
   }
 
