@@ -300,6 +300,7 @@ const newlyAddedSources = [
   "Little Cousins",
 ];
 const trustedStoreSources = new Set([
+  "Jelly Beanz Kids",
   "Buttons and Bows NY",
   "Pacifier Kids",
   "Enjoy Kids US",
